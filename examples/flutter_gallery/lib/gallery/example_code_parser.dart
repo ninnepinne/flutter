@@ -1,4 +1,4 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -17,7 +17,7 @@ Future<String> getExampleCode(String tag, AssetBundle bundle) async {
   return _exampleCode[tag];
 }
 
-Future<Null> _parseExampleCode(AssetBundle bundle) async {
+Future<void> _parseExampleCode(AssetBundle bundle) async {
   final String code = await bundle.loadString('lib/gallery/example_code.dart') ??
     '// lib/gallery/example_code.dart not found\n';
   _exampleCode = <String, String>{};

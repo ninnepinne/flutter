@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -53,10 +53,12 @@ abstract class Notification {
   ///
   /// The notification will be delivered to any [NotificationListener] widgets
   /// with the appropriate type parameters that are ancestors of the given
-  /// [BuildContext].
+  /// [BuildContext]. If the [BuildContext] is null, the notification is not
+  /// dispatched.
   void dispatch(BuildContext target) {
-    assert(target != null); // Only call dispatch if the widget's State is still mounted.
-    target.visitAncestorElements(visitAncestor);
+    // The `target` may be null if the subtree the notification is supposed to be
+    // dispatched in is in the process of being disposed.
+    target?.visitAncestorElements(visitAncestor);
   }
 
   @override

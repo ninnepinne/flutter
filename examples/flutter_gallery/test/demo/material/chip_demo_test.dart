@@ -1,4 +1,4 @@
-// Copyright 2018 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -14,18 +14,20 @@ void main() {
       home: ChipDemo(),
     ));
 
-    expect(tester.getSemanticsData(find.byIcon(Icons.vignette)), matchesSemanticsData(
+    expect(tester.getSemantics(find.byIcon(Icons.vignette)), matchesSemantics(
       isButton: true,
       hasEnabledState: true,
       isEnabled: true,
+      isFocusable: true,
       hasTapAction: true,
       label: 'Update border shape',
     ));
 
-    expect(tester.getSemanticsData(find.byIcon(Icons.refresh)), matchesSemanticsData(
+    expect(tester.getSemantics(find.byIcon(Icons.refresh)), matchesSemantics(
       isButton: true,
       hasEnabledState: true,
       isEnabled: true,
+      isFocusable: true,
       hasTapAction: true,
       label: 'Reset chips',
     ));

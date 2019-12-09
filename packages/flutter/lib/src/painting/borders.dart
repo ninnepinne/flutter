@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -26,7 +26,10 @@ enum BorderStyle {
 /// A [Border] consists of four [BorderSide] objects: [Border.top],
 /// [Border.left], [Border.right], and [Border.bottom].
 ///
-/// ## Sample code
+/// Note that setting [BorderSide.width] to 0.0 will result in hairline
+/// rendering. A more involved explanation is present in [BorderSide.width].
+///
+/// {@tool sample}
 ///
 /// This sample shows how [BorderSide] objects can be used in a [Container], via
 /// a [BoxDecoration] and a [Border], to decorate some [Text]. In this example,
@@ -45,6 +48,7 @@ enum BorderStyle {
 ///   child: Text('Flutter in the sky', textAlign: TextAlign.center),
 /// )
 /// ```
+/// {@end-tool}
 ///
 /// See also:
 ///
@@ -102,9 +106,15 @@ class BorderSide {
   /// The color of this side of the border.
   final Color color;
 
-  /// The width of this side of the border, in logical pixels. A
-  /// zero-width border is a hairline border. To omit the border
-  /// entirely, set the [style] to [BorderStyle.none].
+  /// The width of this side of the border, in logical pixels.
+  ///
+  /// Setting width to 0.0 will result in a hairline border. This means that
+  /// the border will have the width of one physical pixel. Also, hairline
+  /// rendering takes shortcuts when the path overlaps a pixel more than once.
+  /// This means that it will render faster than otherwise, but it might
+  /// double-hit pixels, giving it a slightly darker/lighter result.
+  ///
+  /// To omit the border entirely, set the [style] to [BorderStyle.none].
   final double width;
 
   /// The style of this side of the border.
@@ -120,7 +130,7 @@ class BorderSide {
   BorderSide copyWith({
     Color color,
     double width,
-    BorderStyle style
+    BorderStyle style,
   }) {
     assert(width == null || width >= 0.0);
     return BorderSide(
@@ -142,7 +152,7 @@ class BorderSide {
   ///
   /// Since a zero width is normally painted as a hairline width rather than no
   /// border at all, the zero factor is special-cased to instead change the
-  /// style no [BorderStyle.none].
+  /// style to [BorderStyle.none].
   ///
   /// Values for `t` are usually obtained from an [Animation<double>], such as
   /// an [AnimationController].
@@ -198,7 +208,7 @@ class BorderSide {
   ///
   /// The arguments must not be null.
   ///
-  /// {@macro flutter.material.themeData.lerp}
+  /// {@macro dart.ui.shadow.lerp}
   static BorderSide lerp(BorderSide a, BorderSide b, double t) {
     assert(a != null);
     assert(b != null);
@@ -247,10 +257,10 @@ class BorderSide {
       return true;
     if (runtimeType != other.runtimeType)
       return false;
-    final BorderSide typedOther = other;
-    return color == typedOther.color &&
-           width == typedOther.width &&
-           style == typedOther.style;
+    return other is BorderSide
+        && other.color == color
+        && other.width == width
+        && other.style == style;
   }
 
   @override
@@ -262,7 +272,18 @@ class BorderSide {
 
 /// Base class for shape outlines.
 ///
-/// This class handles how to add multiple borders together.
+/// This class handles how to add multiple borders together. Subclasses define
+/// various shapes, like circles ([CircleBorder]), rounded rectangles
+/// ([RoundedRectangleBorder]), continuous rectangles
+/// ([ContinuousRectangleBorder]), or beveled rectangles
+/// ([BeveledRectangleBorder]).
+///
+/// See also:
+///
+///  * [ShapeDecoration], which can be used with [DecoratedBox] to show a shape.
+///  * [Material] (and many other widgets in the Material library), which takes
+///    a [ShapeBorder] to define its shape.
+///  * [NotchedShape], which describes a shape with a hole in it.
 @immutable
 abstract class ShapeBorder {
   /// Abstract const constructor. This constructor enables subclasses to provide
@@ -404,7 +425,7 @@ abstract class ShapeBorder {
   /// function instead. If both return null, it returns `a` before `t=0.5`
   /// and `b` after `t=0.5`.
   ///
-  /// {@macro flutter.material.themeData.lerp}
+  /// {@macro dart.ui.shadow.lerp}
   static ShapeBorder lerp(ShapeBorder a, ShapeBorder b, double t) {
     assert(t != null);
     ShapeBorder result;
@@ -507,22 +528,18 @@ class _CompoundBorder extends ShapeBorder {
       final ShapeBorder merged = ours.add(other, reversed: reversed)
                              ?? other.add(ours, reversed: !reversed);
       if (merged != null) {
-        final List<ShapeBorder> result = <ShapeBorder>[];
-        result.addAll(borders);
+        final List<ShapeBorder> result = <ShapeBorder>[...borders];
         result[reversed ? result.length - 1 : 0] = merged;
         return _CompoundBorder(result);
       }
     }
     // We can't, so fall back to just adding the new border to the list.
-    final List<ShapeBorder> mergedBorders = <ShapeBorder>[];
-    if (reversed)
-      mergedBorders.addAll(borders);
-    if (other is _CompoundBorder)
-      mergedBorders.addAll(other.borders);
-    else
-      mergedBorders.add(other);
-    if (!reversed)
-      mergedBorders.addAll(borders);
+    final List<ShapeBorder> mergedBorders = <ShapeBorder>[
+      if (reversed) ...borders,
+      if (other is _CompoundBorder) ...other.borders
+      else other,
+      if (!reversed) ...borders,
+    ];
     return _CompoundBorder(mergedBorders);
   }
 
@@ -598,16 +615,8 @@ class _CompoundBorder extends ShapeBorder {
       return true;
     if (runtimeType != other.runtimeType)
       return false;
-    final _CompoundBorder typedOther = other;
-    if (borders == typedOther.borders)
-      return true;
-    if (borders.length != typedOther.borders.length)
-      return false;
-    for (int index = 0; index < borders.length; index += 1) {
-      if (borders[index] != typedOther.borders[index])
-        return false;
-    }
-    return true;
+    return other is _CompoundBorder
+        && listEquals<ShapeBorder>(other.borders, borders);
   }
 
   @override
@@ -640,7 +649,9 @@ class _CompoundBorder extends ShapeBorder {
 ///  * [Border], which uses this function to paint its border when the border is
 ///    not uniform.
 ///  * [BoxDecoration], which describes its border using the [Border] class.
-void paintBorder(Canvas canvas, Rect rect, {
+void paintBorder(
+  Canvas canvas,
+  Rect rect, {
   BorderSide top = BorderSide.none,
   BorderSide right = BorderSide.none,
   BorderSide bottom = BorderSide.none,

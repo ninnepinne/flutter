@@ -1,4 +1,4 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -18,7 +18,7 @@ class SpringDescription {
   const SpringDescription({
     this.mass,
     this.stiffness,
-    this.damping
+    this.damping,
   });
 
   /// Creates a spring given the mass (m), stiffness (k), and damping ratio (ζ).
@@ -31,7 +31,7 @@ class SpringDescription {
   SpringDescription.withDampingRatio({
     this.mass,
     this.stiffness,
-    double ratio = 1.0
+    double ratio = 1.0,
   }) : damping = ratio * 2.0 * math.sqrt(mass * stiffness);
 
   /// The mass of the spring (m). The units are arbitrary, but all springs
@@ -94,8 +94,8 @@ class SpringSimulation extends Simulation {
     double velocity, {
     Tolerance tolerance = Tolerance.defaultTolerance,
   }) : _endPosition = end,
-      _solution = _SpringSolution(spring, start - end, velocity),
-      super(tolerance: tolerance);
+       _solution = _SpringSolution(spring, start - end, velocity),
+       super(tolerance: tolerance);
 
   final double _endPosition;
   final _SpringSolution _solution;
@@ -122,8 +122,8 @@ class SpringSimulation extends Simulation {
   String toString() => '$runtimeType(end: $_endPosition, $type)';
 }
 
-/// A SpringSimulation where the value of [x] is guaranteed to have exactly the
-/// end value when the simulation isDone().
+/// A [SpringSimulation] where the value of [x] is guaranteed to have exactly the
+/// end value when the simulation [isDone].
 class ScrollSpringSimulation extends SpringSimulation {
   /// Creates a spring simulation from the provided spring description, start
   /// distance, end distance, and initial velocity.
@@ -149,7 +149,7 @@ abstract class _SpringSolution {
   factory _SpringSolution(
     SpringDescription spring,
     double initialPosition,
-    double initialVelocity
+    double initialVelocity,
   ) {
     assert(spring != null);
     assert(spring.mass != null);
@@ -174,7 +174,7 @@ class _CriticalSolution implements _SpringSolution {
   factory _CriticalSolution(
     SpringDescription spring,
     double distance,
-    double velocity
+    double velocity,
   ) {
     final double r = -spring.damping / (2.0 * spring.mass);
     final double c1 = distance;
@@ -196,7 +196,7 @@ class _CriticalSolution implements _SpringSolution {
 
   @override
   double dx(double time) {
-    final double power = math.pow(math.e, _r * time);
+    final double power = math.pow(math.e, _r * time) as double;
     return _r * (_c1 + _c2 * time) * power + _c2 * power;
   }
 
@@ -208,7 +208,7 @@ class _OverdampedSolution implements _SpringSolution {
   factory _OverdampedSolution(
     SpringDescription spring,
     double distance,
-    double velocity
+    double velocity,
   ) {
     final double cmk = spring.damping * spring.damping - 4 * spring.mass * spring.stiffness;
     final double r1 = (-spring.damping - math.sqrt(cmk)) / (2.0 * spring.mass);
@@ -246,7 +246,7 @@ class _UnderdampedSolution implements _SpringSolution {
   factory _UnderdampedSolution(
     SpringDescription spring,
     double distance,
-    double velocity
+    double velocity,
   ) {
     final double w = math.sqrt(4.0 * spring.mass * spring.stiffness -
                      spring.damping * spring.damping) / (2.0 * spring.mass);
@@ -266,13 +266,13 @@ class _UnderdampedSolution implements _SpringSolution {
 
   @override
   double x(double time) {
-    return math.pow(math.e, _r * time) *
+    return (math.pow(math.e, _r * time) as double) *
            (_c1 * math.cos(_w * time) + _c2 * math.sin(_w * time));
   }
 
   @override
   double dx(double time) {
-    final double power = math.pow(math.e, _r * time);
+    final double power = math.pow(math.e, _r * time) as double;
     final double cosine = math.cos(_w * time);
     final double sine = math.sin(_w * time);
     return      power * (_c2 * _w * cosine - _c1 * _w * sine) +

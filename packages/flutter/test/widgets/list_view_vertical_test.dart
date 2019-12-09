@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -13,9 +13,9 @@ Widget buildFrame() {
     child: ListView(
       itemExtent: 290.0,
       scrollDirection: Axis.vertical,
-      children: items.map((int item) {
+      children: items.map<Widget>((int item) {
         return Container(
-          child: Text('$item')
+          child: Text('$item'),
         );
       }).toList(),
     ),
@@ -74,9 +74,9 @@ void main() {
           itemExtent: 290.0,
           padding: const EdgeInsets.only(top: 250.0),
           scrollDirection: Axis.vertical,
-          children: items.map((int item) {
+          children: items.map<Widget>((int item) {
             return Container(
-              child: Text('$item')
+              child: Text('$item'),
             );
           }).toList(),
         ),

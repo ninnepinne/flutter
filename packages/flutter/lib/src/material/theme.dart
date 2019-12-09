@@ -1,7 +1,8 @@
-// Copyright 2015 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
@@ -124,27 +125,34 @@ class Theme extends StatelessWidget {
   /// }
   /// ```
   static ThemeData of(BuildContext context, { bool shadowThemeOnly = false }) {
-    final _InheritedTheme inheritedTheme =
-        context.inheritFromWidgetOfExactType(_InheritedTheme);
+    final _InheritedTheme inheritedTheme = context.dependOnInheritedWidgetOfExactType<_InheritedTheme>();
     if (shadowThemeOnly) {
       if (inheritedTheme == null || inheritedTheme.theme.isMaterialAppTheme)
         return null;
       return inheritedTheme.theme.data;
     }
 
-    final ThemeData colorTheme = (inheritedTheme != null) ? inheritedTheme.theme.data : _kFallbackTheme;
     final MaterialLocalizations localizations = MaterialLocalizations.of(context);
-    final TextTheme geometryTheme = localizations?.localTextGeometry ?? MaterialTextGeometry.englishLike;
-    return ThemeData.localize(colorTheme, geometryTheme);
+    final ScriptCategory category = localizations?.scriptCategory ?? ScriptCategory.englishLike;
+    final ThemeData theme = inheritedTheme?.theme?.data ?? _kFallbackTheme;
+    return ThemeData.localize(theme, theme.typography.geometryThemeFor(category));
   }
 
   @override
   Widget build(BuildContext context) {
     return _InheritedTheme(
       theme: this,
-      child: IconTheme(
-        data: data.iconTheme,
-        child: child,
+      child: CupertinoTheme(
+        // We're using a MaterialBasedCupertinoThemeData here instead of a
+        // CupertinoThemeData because it defers some properties to the Material
+        // ThemeData.
+        data: MaterialBasedCupertinoThemeData(
+          materialTheme: data,
+        ),
+        child: IconTheme(
+          data: data.iconTheme,
+          child: child,
+        ),
       ),
     );
   }
@@ -156,15 +164,21 @@ class Theme extends StatelessWidget {
   }
 }
 
-class _InheritedTheme extends InheritedWidget {
+class _InheritedTheme extends InheritedTheme {
   const _InheritedTheme({
     Key key,
     @required this.theme,
-    @required Widget child
+    @required Widget child,
   }) : assert(theme != null),
        super(key: key, child: child);
 
   final Theme theme;
+
+  @override
+  Widget wrap(BuildContext context, Widget child) {
+    final _InheritedTheme ancestorTheme = context.findAncestorWidgetOfExactType<_InheritedTheme>();
+    return identical(this, ancestorTheme) ? child : Theme(data: theme.data, child: child);
+  }
 
   @override
   bool updateShouldNotify(_InheritedTheme old) => theme.data != old.theme.data;
@@ -213,10 +227,11 @@ class AnimatedTheme extends ImplicitlyAnimatedWidget {
     this.isMaterialAppTheme = false,
     Curve curve = Curves.linear,
     Duration duration = kThemeAnimationDuration,
+    VoidCallback onEnd,
     @required this.child,
   }) : assert(child != null),
        assert(data != null),
-       super(key: key, curve: curve, duration: duration);
+       super(key: key, curve: curve, duration: duration, onEnd: onEnd);
 
   /// Specifies the color and typography values for descendant widgets.
   final ThemeData data;
@@ -248,7 +263,7 @@ class _AnimatedThemeState extends AnimatedWidgetBaseState<AnimatedTheme> {
     return Theme(
       isMaterialAppTheme: widget.isMaterialAppTheme,
       child: widget.child,
-      data: _data.evaluate(animation)
+      data: _data.evaluate(animation),
     );
   }
 

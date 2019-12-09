@@ -1,4 +1,4 @@
-// Copyright 2017 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -25,7 +25,9 @@ void main() {
 
     test('inital tree creation', () async {
       // Let app become fully idle.
-      await Future<Null>.delayed(const Duration(seconds: 2));
+      await Future<void>.delayed(const Duration(seconds: 2));
+
+      await driver.forceGC();
 
       final Timeline timeline = await driver.traceAction(() async {
         expect(await driver.setSemantics(true), isTrue);

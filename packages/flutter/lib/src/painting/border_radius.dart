@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -127,7 +127,7 @@ abstract class BorderRadiusGeometry {
   /// representing a combination of both is returned. That object can be turned
   /// into a concrete [BorderRadius] using [resolve].
   ///
-  /// {@macro flutter.material.themeData.lerp}
+  /// {@macro dart.ui.shadow.lerp}
   static BorderRadiusGeometry lerp(BorderRadiusGeometry a, BorderRadiusGeometry b, double t) {
     assert(t != null);
     if (a == null && b == null)
@@ -244,15 +244,15 @@ abstract class BorderRadiusGeometry {
       return true;
     if (runtimeType != other.runtimeType)
       return false;
-    final BorderRadiusGeometry typedOther = other;
-    return _topLeft == typedOther._topLeft
-        && _topRight == typedOther._topRight
-        && _bottomLeft == typedOther._bottomLeft
-        && _bottomRight == typedOther._bottomRight
-        && _topStart == typedOther._topStart
-        && _topEnd == typedOther._topEnd
-        && _bottomStart == typedOther._bottomStart
-        && _bottomEnd == typedOther._bottomEnd;
+    return other is BorderRadiusGeometry
+        && other._topLeft == _topLeft
+        && other._topRight == _topRight
+        && other._bottomLeft == _bottomLeft
+        && other._bottomRight == _bottomRight
+        && other._topStart == _topStart
+        && other._topEnd == _topEnd
+        && other._bottomStart == _bottomStart
+        && other._bottomEnd == _bottomEnd;
   }
 
   @override
@@ -471,7 +471,7 @@ class BorderRadius extends BorderRadiusGeometry {
   ///
   /// If either is null, this function interpolates from [BorderRadius.zero].
   ///
-  /// {@macro flutter.material.themeData.lerp}
+  /// {@macro dart.ui.shadow.lerp}
   static BorderRadius lerp(BorderRadius a, BorderRadius b, double t) {
     assert(t != null);
     if (a == null && b == null)
@@ -688,7 +688,7 @@ class BorderRadiusDirectional extends BorderRadiusGeometry {
   ///
   /// If either is null, this function interpolates from [BorderRadiusDirectional.zero].
   ///
-  /// {@macro flutter.material.themeData.lerp}
+  /// {@macro dart.ui.shadow.lerp}
   static BorderRadiusDirectional lerp(BorderRadiusDirectional a, BorderRadiusDirectional b, double t) {
     assert(t != null);
     if (a == null && b == null)

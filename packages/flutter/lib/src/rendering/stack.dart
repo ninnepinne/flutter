@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -50,7 +50,7 @@ class RelativeRect {
       rect.left - container.left,
       rect.top - container.top,
       container.right - rect.right,
-      container.bottom - rect.bottom
+      container.bottom - rect.bottom,
     );
   }
 
@@ -104,7 +104,7 @@ class RelativeRect {
       math.max(left, other.left),
       math.max(top, other.top),
       math.max(right, other.right),
-      math.max(bottom, other.bottom)
+      math.max(bottom, other.bottom),
     );
   }
 
@@ -131,7 +131,7 @@ class RelativeRect {
   ///
   /// If either rect is null, this function interpolates from [RelativeRect.fill].
   ///
-  /// {@macro flutter.material.themeData.lerp}
+  /// {@macro dart.ui.shadow.lerp}
   static RelativeRect lerp(RelativeRect a, RelativeRect b, double t) {
     assert(t != null);
     if (a == null && b == null)
@@ -154,13 +154,11 @@ class RelativeRect {
   bool operator ==(dynamic other) {
     if (identical(this, other))
       return true;
-    if (other is! RelativeRect)
-      return false;
-    final RelativeRect typedOther = other;
-    return left == typedOther.left &&
-           top == typedOther.top &&
-           right == typedOther.right &&
-           bottom == typedOther.bottom;
+    return other is RelativeRect
+        && other.left == left
+        && other.top == top
+        && other.right == right
+        && other.bottom == bottom;
   }
 
   @override
@@ -213,19 +211,14 @@ class StackParentData extends ContainerBoxParentData<RenderBox> {
 
   @override
   String toString() {
-    final List<String> values = <String>[];
-    if (top != null)
-      values.add('top=$top');
-    if (right != null)
-      values.add('right=$right');
-    if (bottom != null)
-      values.add('bottom=$bottom');
-    if (left != null)
-      values.add('left=$left');
-    if (width != null)
-      values.add('width=$width');
-    if (height != null)
-      values.add('height=$height');
+    final List<String> values = <String>[
+      if (top != null) 'top=${debugFormatDouble(top)}',
+      if (right != null) 'right=${debugFormatDouble(right)}',
+      if (bottom != null) 'bottom=${debugFormatDouble(bottom)}',
+      if (left != null) 'left=${debugFormatDouble(left)}',
+      if (width != null) 'width=${debugFormatDouble(width)}',
+      if (height != null) 'height=${debugFormatDouble(height)}',
+    ];
     if (values.isEmpty)
       values.add('not positioned');
     values.add(super.toString());
@@ -436,7 +429,7 @@ class RenderStack extends RenderBox
     double extent = 0.0;
     RenderBox child = firstChild;
     while (child != null) {
-      final StackParentData childParentData = child.parentData;
+      final StackParentData childParentData = child.parentData as StackParentData;
       if (!childParentData.isPositioned)
         extent = math.max(extent, mainChildSizeGetter(child));
       assert(child.parentData == childParentData);
@@ -502,7 +495,7 @@ class RenderStack extends RenderBox
 
     RenderBox child = firstChild;
     while (child != null) {
-      final StackParentData childParentData = child.parentData;
+      final StackParentData childParentData = child.parentData as StackParentData;
 
       if (!childParentData.isPositioned) {
         hasNonPositionedChildren = true;
@@ -529,10 +522,10 @@ class RenderStack extends RenderBox
 
     child = firstChild;
     while (child != null) {
-      final StackParentData childParentData = child.parentData;
+      final StackParentData childParentData = child.parentData as StackParentData;
 
       if (!childParentData.isPositioned) {
-        childParentData.offset = _resolvedAlignment.alongOffset(size - child.size);
+        childParentData.offset = _resolvedAlignment.alongOffset(size - child.size as Offset);
       } else {
         BoxConstraints childConstraints = const BoxConstraints();
 
@@ -554,7 +547,7 @@ class RenderStack extends RenderBox
         } else if (childParentData.right != null) {
           x = size.width - childParentData.right - child.size.width;
         } else {
-          x = _resolvedAlignment.alongOffset(size - child.size).dx;
+          x = _resolvedAlignment.alongOffset(size - child.size as Offset).dx;
         }
 
         if (x < 0.0 || x + child.size.width > size.width)
@@ -566,7 +559,7 @@ class RenderStack extends RenderBox
         } else if (childParentData.bottom != null) {
           y = size.height - childParentData.bottom - child.size.height;
         } else {
-          y = _resolvedAlignment.alongOffset(size - child.size).dy;
+          y = _resolvedAlignment.alongOffset(size - child.size as Offset).dy;
         }
 
         if (y < 0.0 || y + child.size.height > size.height)
@@ -581,7 +574,7 @@ class RenderStack extends RenderBox
   }
 
   @override
-  bool hitTestChildren(HitTestResult result, { Offset position }) {
+  bool hitTestChildren(BoxHitTestResult result, { Offset position }) {
     return defaultHitTestChildren(result, position: position);
   }
 
@@ -630,15 +623,16 @@ class RenderIndexedStack extends RenderStack {
     AlignmentGeometry alignment = AlignmentDirectional.topStart,
     TextDirection textDirection,
     int index = 0,
-  }) : _index = index, super(
-    children: children,
-    alignment: alignment,
-    textDirection: textDirection,
-  );
+  }) : _index = index,
+       super(
+         children: children,
+         alignment: alignment,
+         textDirection: textDirection,
+       );
 
   @override
   void visitChildrenForSemantics(RenderObjectVisitor visitor) {
-    if (index != null)
+    if (index != null && firstChild != null)
       visitor(_childAtIndex());
   }
 
@@ -657,7 +651,7 @@ class RenderIndexedStack extends RenderStack {
     RenderBox child = firstChild;
     int i = 0;
     while (child != null && i < index) {
-      final StackParentData childParentData = child.parentData;
+      final StackParentData childParentData = child.parentData as StackParentData;
       child = childParentData.nextSibling;
       i += 1;
     }
@@ -667,13 +661,20 @@ class RenderIndexedStack extends RenderStack {
   }
 
   @override
-  bool hitTestChildren(HitTestResult result, { @required Offset position }) {
+  bool hitTestChildren(BoxHitTestResult result, { @required Offset position }) {
     if (firstChild == null || index == null)
       return false;
     assert(position != null);
     final RenderBox child = _childAtIndex();
-    final StackParentData childParentData = child.parentData;
-    return child.hitTest(result, position: position - childParentData.offset);
+    final StackParentData childParentData = child.parentData as StackParentData;
+    return result.addWithPaintOffset(
+      offset: childParentData.offset,
+      position: position,
+      hitTest: (BoxHitTestResult result, Offset transformed) {
+        assert(transformed == position - childParentData.offset);
+        return child.hitTest(result, position: transformed);
+      },
+    );
   }
 
   @override
@@ -681,7 +682,7 @@ class RenderIndexedStack extends RenderStack {
     if (firstChild == null || index == null)
       return;
     final RenderBox child = _childAtIndex();
-    final StackParentData childParentData = child.parentData;
+    final StackParentData childParentData = child.parentData as StackParentData;
     context.paintChild(child, childParentData.offset + offset);
   }
 

@@ -1,4 +1,4 @@
-// Copyright 2017 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -16,7 +16,7 @@ void main() {
     final Finder finder = find.byType(GestureDemo);
 
     MaterialColor getSwatch() => tester.state<GestureDemoState>(finder).swatch;
-    Future<Null> tap() async {
+    Future<void> tap() async {
       final Offset topLeft = tester.getTopLeft(finder);
       await tester.tapAt(tester.getSize(finder).center(topLeft));
       await tester.pump(const Duration(seconds: 1));

@@ -1,4 +1,4 @@
-// Copyright 2018 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -54,6 +54,47 @@ void main() {
     transition = tester.widget(find.byType(FadeTransition).at(2));
     expect(transition.opacity.value, closeTo(0.1, 0.01));
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('AnimatedSwitcher can handle back-to-back changes.', (WidgetTester tester) async {
+    final UniqueKey container1 = UniqueKey();
+    final UniqueKey container2 = UniqueKey();
+    final UniqueKey container3 = UniqueKey();
+    await tester.pumpWidget(
+      AnimatedSwitcher(
+        duration: const Duration(milliseconds: 100),
+        child: Container(key: container1),
+        switchInCurve: Curves.linear,
+        switchOutCurve: Curves.linear,
+      ),
+    );
+    expect(find.byKey(container1), findsOneWidget);
+    expect(find.byKey(container2), findsNothing);
+    expect(find.byKey(container3), findsNothing);
+
+    await tester.pumpWidget(
+      AnimatedSwitcher(
+        duration: const Duration(milliseconds: 100),
+        child: Container(key: container2),
+        switchInCurve: Curves.linear,
+        switchOutCurve: Curves.linear,
+      ),
+    );
+    expect(find.byKey(container1), findsOneWidget);
+    expect(find.byKey(container2), findsOneWidget);
+    expect(find.byKey(container3), findsNothing);
+
+    await tester.pumpWidget(
+      AnimatedSwitcher(
+        duration: const Duration(milliseconds: 100),
+        child: Container(key: container3),
+        switchInCurve: Curves.linear,
+        switchOutCurve: Curves.linear,
+      ),
+    );
+    expect(find.byKey(container1), findsOneWidget);
+    expect(find.byKey(container2), findsNothing);
+    expect(find.byKey(container3), findsOneWidget);
   });
 
   testWidgets("AnimatedSwitcher doesn't transition in a new child of the same type.", (WidgetTester tester) async {
@@ -305,7 +346,7 @@ void main() {
   });
 
   testWidgets('AnimatedSwitcher updates widgets without animating if they are isomorphic.', (WidgetTester tester) async {
-    Future<Null> pumpChild(Widget child) async {
+    Future<void> pumpChild(Widget child) async {
       return tester.pumpWidget(
         Directionality(
           textDirection: TextDirection.rtl,

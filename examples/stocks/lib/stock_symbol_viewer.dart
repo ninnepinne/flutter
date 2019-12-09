@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -30,11 +30,12 @@ class _StockSymbolView extends StatelessWidget {
             children: <Widget>[
               Text(
                 '${stock.symbol}',
-                style: Theme.of(context).textTheme.display2
+                key: ValueKey<String>('${stock.symbol}_symbol_name'),
+                style: Theme.of(context).textTheme.display2,
               ),
               arrow,
             ],
-            mainAxisAlignment: MainAxisAlignment.spaceBetween
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
           ),
           Text('Last Sale', style: headings),
           Text('$lastSale ($changeInPrice)'),
@@ -53,12 +54,12 @@ class _StockSymbolView extends StatelessWidget {
               children: const <TextSpan>[
                 TextSpan(text: 'several', style: TextStyle(fontStyle: FontStyle.italic)),
                 TextSpan(text: ' years.'),
-              ]
-            )
+              ],
+            ),
           ),
         ],
-        mainAxisSize: MainAxisSize.min
-      )
+        mainAxisSize: MainAxisSize.min,
+      ),
     );
   }
 }
@@ -77,7 +78,7 @@ class StockSymbolPage extends StatelessWidget {
         final Stock stock = stocks[symbol];
         return Scaffold(
           appBar: AppBar(
-            title: Text(stock?.name ?? symbol)
+            title: Text(stock?.name ?? symbol),
           ),
           body: SingleChildScrollView(
             child: Container(
@@ -102,9 +103,9 @@ class StockSymbolPage extends StatelessWidget {
                     ),
                   crossFadeState: stock == null && stocks.loading ? CrossFadeState.showFirst : CrossFadeState.showSecond,
                 ),
-              )
-            )
-          )
+              ),
+            ),
+          ),
         );
       },
     );
@@ -125,8 +126,8 @@ class StockSymbolBottomSheet extends StatelessWidget {
       ),
       child: _StockSymbolView(
         stock: stock,
-        arrow: StockArrow(percentChange: stock.percentChange)
-      )
+        arrow: StockArrow(percentChange: stock.percentChange),
+      ),
    );
   }
 }

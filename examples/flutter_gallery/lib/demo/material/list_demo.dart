@@ -1,4 +1,4 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -32,7 +32,7 @@ class ListDemo extends StatefulWidget {
 class _ListDemoState extends State<ListDemo> {
   static final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
 
-  PersistentBottomSheetController<Null> _bottomSheet;
+  PersistentBottomSheetController<void> _bottomSheet;
   _MaterialListType _itemType = _MaterialListType.threeLine;
   bool _dense = false;
   bool _showAvatars = true;
@@ -51,7 +51,7 @@ class _ListDemoState extends State<ListDemo> {
   }
 
   void _showConfigurationSheet() {
-    final PersistentBottomSheetController<Null> bottomSheet = scaffoldKey.currentState.showBottomSheet((BuildContext bottomSheetContext) {
+    final PersistentBottomSheetController<void> bottomSheet = scaffoldKey.currentState.showBottomSheet<void>((BuildContext bottomSheetContext) {
       return Container(
         decoration: const BoxDecoration(
           border: Border(top: BorderSide(color: Colors.black26)),
@@ -68,7 +68,7 @@ class _ListDemoState extends State<ListDemo> {
                   value: _showAvatars ? _MaterialListType.oneLineWithAvatar : _MaterialListType.oneLine,
                   groupValue: _itemType,
                   onChanged: changeItemType,
-                )
+                ),
               ),
             ),
             MergeSemantics(
@@ -79,7 +79,7 @@ class _ListDemoState extends State<ListDemo> {
                   value: _MaterialListType.twoLine,
                   groupValue: _itemType,
                   onChanged: changeItemType,
-                )
+                ),
               ),
             ),
             MergeSemantics(
@@ -209,7 +209,7 @@ class _ListDemoState extends State<ListDemo> {
         break;
     }
 
-    Iterable<Widget> listTiles = items.map((String item) => buildListTile(context, item));
+    Iterable<Widget> listTiles = items.map<Widget>((String item) => buildListTile(context, item));
     if (_showDividers)
       listTiles = ListTile.divideTiles(context: context, tiles: listTiles);
 

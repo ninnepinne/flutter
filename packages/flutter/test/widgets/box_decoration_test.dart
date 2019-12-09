@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -18,7 +18,7 @@ import '../rendering/mock_canvas.dart';
 class TestImageProvider extends ImageProvider<TestImageProvider> {
   TestImageProvider(this.future);
 
-  final Future<Null> future;
+  final Future<void> future;
 
   static ui.Image image;
 
@@ -28,19 +28,20 @@ class TestImageProvider extends ImageProvider<TestImageProvider> {
   }
 
   @override
-  ImageStreamCompleter load(TestImageProvider key) {
+  ImageStreamCompleter load(TestImageProvider key, DecoderCallback decode) {
     return OneFrameImageStreamCompleter(
-      future.then<ImageInfo>((Null value) => ImageInfo(image: image))
+      future.then<ImageInfo>((void value) => ImageInfo(image: image))
     );
   }
 }
 
-Future<Null> main() async {
+Future<void> main() async {
+  AutomatedTestWidgetsFlutterBinding();
   TestImageProvider.image = await decodeImageFromList(Uint8List.fromList(kTransparentImage));
 
   testWidgets('DecoratedBox handles loading images', (WidgetTester tester) async {
     final GlobalKey key = GlobalKey();
-    final Completer<Null> completer = Completer<Null>();
+    final Completer<void> completer = Completer<void>();
     await tester.pumpWidget(
       KeyedSubtree(
         key: key,
@@ -62,7 +63,7 @@ Future<Null> main() async {
   });
 
   testWidgets('Moving a DecoratedBox', (WidgetTester tester) async {
-    final Completer<Null> completer = Completer<Null>();
+    final Completer<void> completer = Completer<void>();
     final Widget subtree = KeyedSubtree(
       key: GlobalKey(),
       child: RepaintBoundary(
@@ -97,9 +98,9 @@ Future<Null> main() async {
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           border: Border.all(width: 10.0, color: const Color(0x80FF00FF)),
-          color: Colors.teal[600]
-        )
-      )
+          color: Colors.teal[600],
+        ),
+      ),
     );
   });
 
@@ -112,10 +113,10 @@ Future<Null> main() async {
           decoration: BoxDecoration(border: Border.all(width: 10.0)),
           child: Container(
             width: 25.0,
-            height: 25.0
-          )
-        )
-      )
+            height: 25.0,
+          ),
+        ),
+      ),
     );
     expect(tester.getSize(find.byKey(key)), equals(const Size(45.0, 45.0)));
   });
@@ -243,7 +244,7 @@ Future<Null> main() async {
       ..path()
       ..path()
       ..path()
-      ..rect(rect: Rect.fromLTRB(355.0, 105.0, 445.0, 195.0))
+      ..rect(rect: const Rect.fromLTRB(355.0, 105.0, 445.0, 195.0))
       ..drrect(
         outer: RRect.fromLTRBAndCorners(
           350.0, 200.0, 450.0, 300.0,
@@ -260,7 +261,7 @@ Future<Null> main() async {
           bottomLeft: const Radius.circular(-10.0),
         ),
       )
-      ..circle(x: 400.0, y: 350.0, radius: 45.0)
+      ..circle(x: 400.0, y: 350.0, radius: 45.0),
     );
   });
 
@@ -283,7 +284,7 @@ Future<Null> main() async {
           onTap: () {
             itemsTapped.add(1);
           },
-        )
+        ),
       );
     }
 
@@ -320,7 +321,7 @@ Future<Null> main() async {
           onTap: () {
             itemsTapped.add(1);
           },
-        )
+        ),
       );
     }
 

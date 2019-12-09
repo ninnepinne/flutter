@@ -1,4 +1,4 @@
-// Copyright 2017 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -92,13 +92,6 @@ class _InkRippleFactory extends InteractiveInkFeatureFactory {
 ///  * [InkHighlight], which is an ink feature that emphasizes a part of a
 ///    [Material].
 class InkRipple extends InteractiveInkFeature {
-  /// Used to specify this type of ink splash for an [InkWell], [InkResponse]
-  /// or material [Theme].
-  static const InteractiveInkFeatureFactory splashFactory = _InkRippleFactory();
-
-  static final Animatable<double> _easeCurveTween = CurveTween(curve: Curves.ease);
-  static final Animatable<double> _fadeOutIntervalTween = CurveTween(curve: const Interval(_kFadeOutIntervalStart, 1.0));
-
   /// Begin a ripple, centered at [position] relative to [referenceBox].
   ///
   /// The [controller] argument is typically obtained via
@@ -135,8 +128,7 @@ class InkRipple extends InteractiveInkFeature {
        _textDirection = textDirection,
        _targetRadius = radius ?? _getTargetRadius(referenceBox, containedInkWell, rectCallback, position),
        _clipCallback = _getClipCallback(referenceBox, containedInkWell, rectCallback),
-       super(controller: controller, referenceBox: referenceBox, color: color, onRemoved: onRemoved)
-  {
+       super(controller: controller, referenceBox: referenceBox, color: color, onRemoved: onRemoved) {
     assert(_borderRadius != null);
 
     // Immediately begin fading-in the initial splash.
@@ -191,6 +183,13 @@ class InkRipple extends InteractiveInkFeature {
 
   Animation<int> _fadeOut;
   AnimationController _fadeOutController;
+
+  /// Used to specify this type of ink splash for an [InkWell], [InkResponse]
+  /// or material [Theme].
+  static const InteractiveInkFeatureFactory splashFactory = _InkRippleFactory();
+
+  static final Animatable<double> _easeCurveTween = CurveTween(curve: Curves.ease);
+  static final Animatable<double> _fadeOutIntervalTween = CurveTween(curve: const Interval(_kFadeOutIntervalStart, 1.0));
 
   @override
   void confirm() {

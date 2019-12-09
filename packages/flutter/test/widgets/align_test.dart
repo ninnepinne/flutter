@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -24,20 +24,20 @@ void main() {
 
     await tester.pumpWidget(
       const Align(
-        key: GlobalObjectKey<Null>(null),
+        key: GlobalObjectKey<State<StatefulWidget>>(null),
         alignment: Alignment.topLeft,
       ),
     );
     await tester.pumpWidget(const Directionality(
       textDirection: TextDirection.rtl,
       child: Align(
-        key: GlobalObjectKey<Null>(null),
+        key: GlobalObjectKey<State<StatefulWidget>>(null),
         alignment: AlignmentDirectional.topStart,
       ),
     ));
     await tester.pumpWidget(
       const Align(
-        key: GlobalObjectKey<Null>(null),
+        key: GlobalObjectKey<State<StatefulWidget>>(null),
         alignment: Alignment.topLeft,
       ),
     );
@@ -99,7 +99,7 @@ void main() {
           key: alignKey,
           child: Container(
             width: 10.0,
-            height: 10.0
+            height: 10.0,
           ),
           alignment: const Alignment(0.0, 0.0),
         ),

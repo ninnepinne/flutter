@@ -1,4 +1,4 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -10,6 +10,9 @@ import 'basic.dart';
 import 'framework.dart';
 import 'image.dart';
 
+// Examples can assume:
+// BuildContext context;
+
 /// A widget that paints a [Decoration] either before or after its child paints.
 ///
 /// [Container] insets its child by the widths of the borders; this widget does
@@ -17,7 +20,10 @@ import 'image.dart';
 ///
 /// Commonly used with [BoxDecoration].
 ///
-/// ## Sample code
+/// The [child] is not clipped. To clip a child to the shape of a particular
+/// [ShapeDecoration], consider using a [ClipPath] widget.
+///
+/// {@tool sample}
 ///
 /// This sample shows a radial gradient that draws a moon on a night sky:
 ///
@@ -36,6 +42,51 @@ import 'image.dart';
 ///   ),
 /// )
 /// ```
+/// {@end-tool}
+///
+/// ## Layout behavior
+///
+/// _See [BoxConstraints] for an introduction to box layout models._
+///
+/// Since [Container] combines a number of other widgets each with their own
+/// layout behavior, [Container]'s layout behavior is somewhat complicated.
+///
+/// Summary: [Container] tries, in order: to honor [alignment], to size itself to
+/// the [child], to honor the `width`, `height`, and [constraints], to expand to
+/// fit the parent, to be as small as possible.
+///
+/// More specifically:
+///
+/// If the widget has no child, no `height`, no `width`, no [constraints],
+/// and the parent provides unbounded constraints, then [Container] tries to
+/// size as small as possible.
+///
+/// If the widget has no child and no [alignment], but a `height`, `width`, or
+/// [constraints] are provided, then the [Container] tries to be as small as
+/// possible given the combination of those constraints and the parent's
+/// constraints.
+///
+/// If the widget has no child, no `height`, no `width`, no [constraints], and
+/// no [alignment], but the parent provides bounded constraints, then
+/// [Container] expands to fit the constraints provided by the parent.
+///
+/// If the widget has an [alignment], and the parent provides unbounded
+/// constraints, then the [Container] tries to size itself around the child.
+///
+/// If the widget has an [alignment], and the parent provides bounded
+/// constraints, then the [Container] tries to expand to fit the parent, and
+/// then positions the child within itself as per the [alignment].
+///
+/// Otherwise, the widget has a [child] but no `height`, no `width`, no
+/// [constraints], and no [alignment], and the [Container] passes the
+/// constraints from the parent to the child and sizes itself to match the
+/// child.
+///
+/// The [margin] and [padding] properties also affect the layout, as described
+/// in the documentation for those properties. (Their effects merely augment the
+/// rules described above.) The [decoration] can implicitly increase the
+/// [padding] (e.g. borders in a [BoxDecoration] contribute to the [padding]);
+/// see [Decoration.padding].
 ///
 /// See also:
 ///
@@ -55,7 +106,7 @@ class DecoratedBox extends SingleChildRenderObjectWidget {
     Key key,
     @required this.decoration,
     this.position = DecorationPosition.background,
-    Widget child
+    Widget child,
   }) : assert(decoration != null),
        assert(position != null),
        super(key: key, child: child);
@@ -114,6 +165,8 @@ class DecoratedBox extends SingleChildRenderObjectWidget {
 /// A convenience widget that combines common painting, positioning, and sizing
 /// widgets.
 ///
+/// {@youtube 560 315 https://www.youtube.com/watch?v=c1xLMaTUWCY}
+///
 /// A container first surrounds the child with [padding] (inflated by any
 /// borders present in the [decoration]) and then applies additional
 /// [constraints] to the padded extent (incorporating the `width` and `height`
@@ -138,9 +191,9 @@ class DecoratedBox extends SingleChildRenderObjectWidget {
 /// Since [Container] combines a number of other widgets each with their own
 /// layout behavior, [Container]'s layout behavior is somewhat complicated.
 ///
-/// tl;dr: [Container] tries, in order: to honor [alignment], to size itself to
-/// the [child], to honor the `width`, `height`, and [constraints], to expand to
-/// fit the parent, to be as small as possible.
+/// Summary: [Container] tries, in order: to honor [alignment], to size itself
+/// to the [child], to honor the `width`, `height`, and [constraints], to expand
+/// to fit the parent, to be as small as possible.
 ///
 /// More specifically:
 ///
@@ -175,32 +228,40 @@ class DecoratedBox extends SingleChildRenderObjectWidget {
 /// [padding] (e.g. borders in a [BoxDecoration] contribute to the [padding]);
 /// see [Decoration.padding].
 ///
-/// ## Sample code
+/// ## Example
 ///
-/// This example shows a 48x48 green square (placed inside a [Center] widget in
+/// {@tool sample}
+/// This example shows a 48x48 amber square (placed inside a [Center] widget in
 /// case the parent widget has its own opinions regarding the size that the
 /// [Container] should take), with a margin so that it stays away from
 /// neighboring widgets:
+///
+/// ![An amber colored container with the dimensions of 48 square pixels.](https://flutter.github.io/assets-for-api-docs/assets/widgets/container_a.png)
 ///
 /// ```dart
 /// Center(
 ///   child: Container(
 ///     margin: const EdgeInsets.all(10.0),
-///     color: const Color(0xFF00FF00),
+///     color: Colors.amber[600],
 ///     width: 48.0,
 ///     height: 48.0,
 ///   ),
 /// )
 /// ```
+/// {@end-tool}
+///
+/// {@tool sample}
 ///
 /// This example shows how to use many of the features of [Container] at once.
 /// The [constraints] are set to fit the font size plus ample headroom
 /// vertically, while expanding horizontally to fit the parent. The [padding] is
 /// used to make sure there is space between the contents and the text. The
-/// `color` makes the box teal. The [alignment] causes the [child] to be
-/// centered in the box. The [foregroundDecoration] overlays a nine-patch image
-/// onto the text. Finally, the [transform] applies a slight rotation to the
+/// [color] makes the box blue. The [alignment] causes the [child] to be
+/// centered in the box. Finally, the [transform] applies a slight rotation to the
 /// entire contraption to complete the effect.
+///
+/// ![A blue rectangular container with 'Hello World' in the center, rotated
+/// slightly in the z axis.](https://flutter.github.io/assets-for-api-docs/assets/widgets/container_b.png)
 ///
 /// ```dart
 /// Container(
@@ -208,18 +269,17 @@ class DecoratedBox extends SingleChildRenderObjectWidget {
 ///     height: Theme.of(context).textTheme.display1.fontSize * 1.1 + 200.0,
 ///   ),
 ///   padding: const EdgeInsets.all(8.0),
-///   color: Colors.teal.shade700,
+///   color: Colors.blue[600],
 ///   alignment: Alignment.center,
-///   child: Text('Hello World', style: Theme.of(context).textTheme.display1.copyWith(color: Colors.white)),
-///   foregroundDecoration: BoxDecoration(
-///     image: DecorationImage(
-///       image: NetworkImage('https://www.example.com/images/frame.png'),
-///       centerSlice: Rect.fromLTRB(270.0, 180.0, 1360.0, 730.0),
-///     ),
-///   ),
+///   child: Text('Hello World',
+///     style: Theme.of(context)
+///         .textTheme
+///         .display1
+///         .copyWith(color: Colors.white)),
 ///   transform: Matrix4.rotationZ(0.1),
 /// )
 /// ```
+/// {@end-tool}
 ///
 /// See also:
 ///
@@ -228,7 +288,7 @@ class DecoratedBox extends SingleChildRenderObjectWidget {
 ///  * [Border], which has a sample which uses [Container] heavily.
 ///  * [Ink], which paints a [Decoration] on a [Material], allowing
 ///    [InkResponse] and [InkWell] splashes to paint over them.
-///  * The [catalog of layout widgets](https://flutter.io/widgets/layout/).
+///  * The [catalog of layout widgets](https://flutter.dev/widgets/layout/).
 class Container extends StatelessWidget {
   /// Creates a widget that combines common painting, positioning, and sizing widgets.
   ///
@@ -252,10 +312,12 @@ class Container extends StatelessWidget {
     this.margin,
     this.transform,
     this.child,
+    this.clipBehavior = Clip.none,
   }) : assert(margin == null || margin.isNonNegative),
        assert(padding == null || padding.isNonNegative),
        assert(decoration == null || decoration.debugAssertIsValid()),
        assert(constraints == null || constraints.debugAssertIsValid()),
+       assert(clipBehavior != null),
        assert(color == null || decoration == null,
          'Cannot provide both a color and a decoration\n'
          'The color argument is just a shorthand for "decoration: new BoxDecoration(color: color)".'
@@ -306,6 +368,9 @@ class Container extends StatelessWidget {
   /// A shorthand for specifying just a solid color is available in the
   /// constructor: set the `color` argument instead of the `decoration`
   /// argument.
+  ///
+  /// The [child] is not clipped to the decoration. To clip a child to the shape
+  /// of a particular [ShapeDecoration], consider using a [ClipPath] widget.
   final Decoration decoration;
 
   /// The decoration to paint in front of the [child].
@@ -325,6 +390,11 @@ class Container extends StatelessWidget {
   /// The transformation matrix to apply before painting the container.
   final Matrix4 transform;
 
+  /// The clip behavior when [Container.decoration] has a clipPath.
+  ///
+  /// Defaults to [Clip.none].
+  final Clip clipBehavior;
+
   EdgeInsetsGeometry get _paddingIncludingDecoration {
     if (decoration == null || decoration.padding == null)
       return padding;
@@ -342,7 +412,7 @@ class Container extends StatelessWidget {
       current = LimitedBox(
         maxWidth: 0.0,
         maxHeight: 0.0,
-        child: ConstrainedBox(constraints: const BoxConstraints.expand())
+        child: ConstrainedBox(constraints: const BoxConstraints.expand()),
       );
     }
 
@@ -360,7 +430,7 @@ class Container extends StatelessWidget {
       current = DecoratedBox(
         decoration: foregroundDecoration,
         position: DecorationPosition.foreground,
-        child: current
+        child: current,
       );
     }
 
@@ -373,6 +443,17 @@ class Container extends StatelessWidget {
     if (transform != null)
       current = Transform(transform: transform, child: current);
 
+    if (clipBehavior != Clip.none) {
+      current = ClipPath(
+        clipper: _DecorationClipper(
+          textDirection: Directionality.of(context),
+          decoration: decoration
+        ),
+        clipBehavior: clipBehavior,
+        child: current,
+      );
+    }
+
     return current;
   }
 
@@ -381,10 +462,34 @@ class Container extends StatelessWidget {
     super.debugFillProperties(properties);
     properties.add(DiagnosticsProperty<AlignmentGeometry>('alignment', alignment, showName: false, defaultValue: null));
     properties.add(DiagnosticsProperty<EdgeInsetsGeometry>('padding', padding, defaultValue: null));
+    properties.add(DiagnosticsProperty<Clip>('clipBehavior', clipBehavior, defaultValue: Clip.none));
     properties.add(DiagnosticsProperty<Decoration>('bg', decoration, defaultValue: null));
     properties.add(DiagnosticsProperty<Decoration>('fg', foregroundDecoration, defaultValue: null));
     properties.add(DiagnosticsProperty<BoxConstraints>('constraints', constraints, defaultValue: null));
     properties.add(DiagnosticsProperty<EdgeInsetsGeometry>('margin', margin, defaultValue: null));
     properties.add(ObjectFlagProperty<Matrix4>.has('transform', transform));
+  }
+}
+
+/// A clipper that uses [Decoration.getClipPath] to clip.
+class _DecorationClipper extends CustomClipper<Path> {
+  _DecorationClipper({
+    TextDirection textDirection,
+    @required this.decoration
+  }) : assert (decoration != null),
+       textDirection = textDirection ?? TextDirection.ltr;
+
+  final TextDirection textDirection;
+  final Decoration decoration;
+
+  @override
+  Path getClip(Size size) {
+    return decoration.getClipPath(Offset.zero & size, textDirection);
+  }
+
+  @override
+  bool shouldReclip(_DecorationClipper oldClipper) {
+    return oldClipper.decoration != decoration
+        || oldClipper.textDirection != textDirection;
   }
 }

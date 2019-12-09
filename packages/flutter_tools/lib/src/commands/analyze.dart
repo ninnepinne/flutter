@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -20,7 +20,7 @@ class AnalyzeCommand extends FlutterCommand {
         help: 'Analyze the current project, if applicable.', defaultsTo: true);
     argParser.addFlag('dartdocs',
         negatable: false,
-        help: 'List every public member that is lacking documentation.\n'
+        help: 'List every public member that is lacking documentation. '
               '(The public_member_api_docs lint must be enabled in analysis_options.yaml)',
         hide: !verboseHelp);
     argParser.addFlag('watch',
@@ -45,7 +45,7 @@ class AnalyzeCommand extends FlutterCommand {
 
     // Not used by analyze --watch
     argParser.addFlag('congratulate',
-        help: 'Show output even when there are no errors, warnings, hints, or lints.\n'
+        help: 'Show output even when there are no errors, warnings, hints, or lints. '
               'Ignored if --watch is specified.',
         defaultsTo: true);
     argParser.addFlag('preamble',
@@ -67,7 +67,7 @@ class AnalyzeCommand extends FlutterCommand {
   @override
   bool get shouldRunPub {
     // If they're not analyzing the current project.
-    if (!argResults['current-package']) {
+    if (!boolArg('current-package')) {
       return false;
     }
 
@@ -80,20 +80,22 @@ class AnalyzeCommand extends FlutterCommand {
   }
 
   @override
-  Future<Null> runCommand() {
-    if (argResults['watch']) {
-      return AnalyzeContinuously(
+  Future<FlutterCommandResult> runCommand() async {
+    if (boolArg('watch')) {
+      await AnalyzeContinuously(
         argResults,
         runner.getRepoRoots(),
         runner.getRepoPackages(),
       ).analyze();
+      return null;
     } else {
-      return AnalyzeOnce(
+      await AnalyzeOnce(
         argResults,
         runner.getRepoRoots(),
         runner.getRepoPackages(),
         workingDirectory: workingDirectory,
       ).analyze();
+      return null;
     }
   }
 }

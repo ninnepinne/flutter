@@ -1,4 +1,4 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -186,7 +186,7 @@ void main() {
       ),
     );
     expect(tester.getSize(find.text('Z')), equals(const Size(16.0, 16.0)));
-  });
+  }, skip: isBrowser);
 
   testWidgets('CircleAvatar respects minRadius', (WidgetTester tester) async {
     final Color backgroundColor = Colors.blue.shade900;

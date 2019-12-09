@@ -1,11 +1,10 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 import 'dart:async';
 import 'dart:collection';
 import 'dart:convert';
-import 'dart:io';
 import 'dart:ui' show hashValues;
 
 import 'package:flutter/foundation.dart';
@@ -105,14 +104,14 @@ const String _kAssetManifestFileName = 'AssetManifest.json';
 /// lib/backgrounds/background1.png
 /// lib/backgrounds/background2.png
 /// lib/backgrounds/background3.png
-///```
+/// ```
 ///
 /// To include, say the first image, the `pubspec.yaml` of the app should specify
 /// it in the `assets` section:
 ///
 /// ```yaml
-///  assets:
-///    - packages/fancy_backgrounds/backgrounds/background1.png
+///   assets:
+///     - packages/fancy_backgrounds/backgrounds/background1.png
 /// ```
 ///
 /// The `lib/` is implied, so it should not be included in the asset path.
@@ -128,7 +127,8 @@ class AssetImage extends AssetBundleImageProvider {
   /// from the set of images to choose from. The [package] argument must be
   /// non-null when fetching an asset that is included in package. See the
   /// documentation for the [AssetImage] class itself for details.
-  const AssetImage(this.assetName, {
+  const AssetImage(
+    this.assetName, {
     this.bundle,
     this.package,
   }) : assert(assetName != null);
@@ -176,13 +176,13 @@ class AssetImage extends AssetBundleImageProvider {
         final String chosenName = _chooseVariant(
           keyName,
           configuration,
-          manifest == null ? null : manifest[keyName]
+          manifest == null ? null : manifest[keyName],
         );
         final double chosenScale = _parseScale(chosenName);
         final AssetBundleImageKey key = AssetBundleImageKey(
           bundle: chosenBundle,
           name: chosenName,
-          scale: chosenScale
+          scale: chosenScale,
         );
         if (completer != null) {
           // We already returned from this function, which means we are in the
@@ -217,13 +217,13 @@ class AssetImage extends AssetBundleImageProvider {
 
   static Future<Map<String, List<String>>> _manifestParser(String jsonData) {
     if (jsonData == null)
-      return null;
+      return SynchronousFuture<Map<String, List<String>>>(null);
     // TODO(ianh): JSON decoding really shouldn't be on the main thread.
-    final Map<String, dynamic> parsedJson = json.decode(jsonData);
+    final Map<String, dynamic> parsedJson = json.decode(jsonData) as Map<String, dynamic>;
     final Iterable<String> keys = parsedJson.keys;
     final Map<String, List<String>> parsedManifest =
         Map<String, List<String>>.fromIterables(keys,
-          keys.map((String key) => List<String>.from(parsedJson[key])));
+          keys.map<List<String>>((String key) => List<String>.from(parsedJson[key] as List<dynamic>)));
     // TODO(ianh): convert that data structure to the right types.
     return SynchronousFuture<Map<String, List<String>>>(parsedManifest);
   }
@@ -260,15 +260,17 @@ class AssetImage extends AssetBundleImageProvider {
   static final RegExp _extractRatioRegExp = RegExp(r'/?(\d+(\.\d*)?)x$');
 
   double _parseScale(String key) {
-
-    if ( key == assetName){
+    if (key == assetName) {
       return _naturalResolution;
     }
 
-    final File assetPath = File(key);
-    final Directory assetDir = assetPath.parent;
+    final Uri assetUri = Uri.parse(key);
+    String directoryPath = '';
+    if (assetUri.pathSegments.length > 1) {
+      directoryPath = assetUri.pathSegments[assetUri.pathSegments.length - 2];
+    }
 
-    final Match match = _extractRatioRegExp.firstMatch(assetDir.path);
+    final Match match = _extractRatioRegExp.firstMatch(directoryPath);
     if (match != null && match.groupCount > 0)
       return double.parse(match.group(1));
     return _naturalResolution; // i.e. default to 1.0x
@@ -278,9 +280,9 @@ class AssetImage extends AssetBundleImageProvider {
   bool operator ==(dynamic other) {
     if (other.runtimeType != runtimeType)
       return false;
-    final AssetImage typedOther = other;
-    return keyName == typedOther.keyName
-        && bundle == typedOther.bundle;
+    return other is AssetImage
+        && other.keyName == keyName
+        && other.bundle == bundle;
   }
 
   @override

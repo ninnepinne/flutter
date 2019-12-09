@@ -1,4 +1,4 @@
-// Copyright (c) 2016 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -29,16 +29,16 @@ void main() {
     });
     section('TEST WHETHER `flutter run --route` WORKS');
     await inDirectory(appDir, () async {
-      final Completer<Null> ready = Completer<Null>();
+      final Completer<void> ready = Completer<void>();
       bool ok;
       print('run: starting...');
       final Process run = await startProcess(
         path.join(flutterDirectory.path, 'bin', 'flutter'),
-        <String>['run', '--verbose', '-d', device.deviceId, '--route', '/smuggle-it', 'lib/route.dart'],
+        <String>['run', '--verbose', '--disable-service-auth-codes', '-d', device.deviceId, '--route', '/smuggle-it', 'lib/route.dart'],
       );
       run.stdout
-        .transform(utf8.decoder)
-        .transform(const LineSplitter())
+        .transform<String>(utf8.decoder)
+        .transform<String>(const LineSplitter())
         .listen((String line) {
           print('run:stdout: $line');
           if (vmServicePort == null) {
@@ -52,12 +52,12 @@ void main() {
           }
         });
       run.stderr
-        .transform(utf8.decoder)
-        .transform(const LineSplitter())
+        .transform<String>(utf8.decoder)
+        .transform<String>(const LineSplitter())
         .listen((String line) {
           stderr.writeln('run:stderr: $line');
         });
-      run.exitCode.then((int exitCode) { ok = false; });
+      run.exitCode.then<void>((int exitCode) { ok = false; });
       await Future.any<dynamic>(<Future<dynamic>>[ ready.future, run.exitCode ]);
       if (!ok)
         throw 'Failed to run test app.';
@@ -67,14 +67,14 @@ void main() {
         <String>['drive', '--use-existing-app', 'http://127.0.0.1:$vmServicePort/', '--no-keep-app-running', 'lib/route.dart'],
       );
       drive.stdout
-        .transform(utf8.decoder)
-        .transform(const LineSplitter())
+        .transform<String>(utf8.decoder)
+        .transform<String>(const LineSplitter())
         .listen((String line) {
           print('drive:stdout: $line');
         });
       drive.stderr
-        .transform(utf8.decoder)
-        .transform(const LineSplitter())
+        .transform<String>(utf8.decoder)
+        .transform<String>(const LineSplitter())
         .listen((String line) {
           stderr.writeln('drive:stderr: $line');
         });

@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -150,14 +150,14 @@ class TabsDemo extends StatelessWidget {
             return <Widget>[
               SliverOverlapAbsorber(
                 handle: NestedScrollView.sliverOverlapAbsorberHandleFor(context),
-                child: SliverAppBar(
+                sliver: SliverAppBar(
                   title: const Text('Tabs and scrolling'),
                   actions: <Widget>[MaterialDemoDocumentationButton(routeName)],
                   pinned: true,
                   expandedHeight: 150.0,
                   forceElevated: innerBoxIsScrolled,
                   bottom: TabBar(
-                    tabs: _allPages.keys.map(
+                    tabs: _allPages.keys.map<Widget>(
                       (_Page page) => Tab(text: page.label),
                     ).toList(),
                   ),
@@ -166,7 +166,7 @@ class TabsDemo extends StatelessWidget {
             ];
           },
           body: TabBarView(
-            children: _allPages.keys.map((_Page page) {
+            children: _allPages.keys.map<Widget>((_Page page) {
               return SafeArea(
                 top: false,
                 bottom: false,

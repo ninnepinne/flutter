@@ -1,7 +1,8 @@
-// Copyright 2015 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/rendering.dart';
@@ -23,6 +24,8 @@ const double _kSwitchWidth = _kTrackWidth - 2 * _kTrackRadius + 2 * kRadialReact
 const double _kSwitchHeight = 2 * kRadialReactionRadius + 8.0;
 const double _kSwitchHeightCollapsed = 2 * kRadialReactionRadius;
 
+enum _SwitchType { material, adaptive }
+
 /// A material design switch.
 ///
 /// Used to toggle the on/off state of a single setting.
@@ -31,6 +34,11 @@ const double _kSwitchHeightCollapsed = 2 * kRadialReactionRadius;
 /// the switch changes, the widget calls the [onChanged] callback. Most widgets
 /// that use a switch will listen for the [onChanged] callback and rebuild the
 /// switch with a new [value] to update the visual appearance of the switch.
+///
+/// If the [onChanged] callback is null, then the switch will be disabled (it
+/// will not respond to input). A disabled switch's thumb and track are rendered
+/// in shades of grey by default. The default appearance of a disabled switch
+/// can be overridden with [inactiveThumbColor] and [inactiveTrackColor].
 ///
 /// Requires one of its ancestors to be a [Material] widget.
 ///
@@ -41,7 +49,7 @@ const double _kSwitchHeightCollapsed = 2 * kRadialReactionRadius;
 ///  * [Checkbox], another widget with similar semantics.
 ///  * [Radio], for selecting among a set of explicit values.
 ///  * [Slider], for selecting a value in a range.
-///  * <https://material.google.com/components/selection-controls.html#selection-controls-switch>
+///  * <https://material.io/design/components/selection-controls.html#switches>
 class Switch extends StatefulWidget {
   /// Creates a material design switch.
   ///
@@ -65,7 +73,42 @@ class Switch extends StatefulWidget {
     this.activeThumbImage,
     this.inactiveThumbImage,
     this.materialTapTargetSize,
-  }) : super(key: key);
+    this.dragStartBehavior = DragStartBehavior.start,
+    this.focusColor,
+    this.hoverColor,
+    this.focusNode,
+    this.autofocus = false,
+  })  : _switchType = _SwitchType.material,
+        assert(dragStartBehavior != null),
+        super(key: key);
+
+  /// Creates a [CupertinoSwitch] if the target platform is iOS, creates a
+  /// material design switch otherwise.
+  ///
+  /// If a [CupertinoSwitch] is created, the following parameters are
+  /// ignored: [activeTrackColor], [inactiveThumbColor], [inactiveTrackColor],
+  /// [activeThumbImage], [inactiveThumbImage], [materialTapTargetSize].
+  ///
+  /// The target platform is based on the current [Theme]: [ThemeData.platform].
+  const Switch.adaptive({
+    Key key,
+    @required this.value,
+    @required this.onChanged,
+    this.activeColor,
+    this.activeTrackColor,
+    this.inactiveThumbColor,
+    this.inactiveTrackColor,
+    this.activeThumbImage,
+    this.inactiveThumbImage,
+    this.materialTapTargetSize,
+    this.dragStartBehavior = DragStartBehavior.start,
+    this.focusColor,
+    this.hoverColor,
+    this.focusNode,
+    this.autofocus = false,
+  })  : assert(autofocus != null),
+        _switchType = _SwitchType.adaptive,
+        super(key: key);
 
   /// Whether this switch is on or off.
   ///
@@ -104,22 +147,32 @@ class Switch extends StatefulWidget {
   /// The color to use on the track when this switch is on.
   ///
   /// Defaults to [ThemeData.toggleableActiveColor] with the opacity set at 50%.
+  ///
+  /// Ignored if this switch is created with [Switch.adaptive].
   final Color activeTrackColor;
 
   /// The color to use on the thumb when this switch is off.
   ///
   /// Defaults to the colors described in the Material design specification.
+  ///
+  /// Ignored if this switch is created with [Switch.adaptive].
   final Color inactiveThumbColor;
 
   /// The color to use on the track when this switch is off.
   ///
   /// Defaults to the colors described in the Material design specification.
+  ///
+  /// Ignored if this switch is created with [Switch.adaptive].
   final Color inactiveTrackColor;
 
   /// An image to use on the thumb of this switch when the switch is on.
+  ///
+  /// Ignored if this switch is created with [Switch.adaptive].
   final ImageProvider activeThumbImage;
 
   /// An image to use on the thumb of this switch when the switch is off.
+  ///
+  /// Ignored if this switch is created with [Switch.adaptive].
   final ImageProvider inactiveThumbImage;
 
   /// Configures the minimum size of the tap target.
@@ -128,8 +181,25 @@ class Switch extends StatefulWidget {
   ///
   /// See also:
   ///
-  ///   * [MaterialTapTargetSize], for a description of how this affects tap targets.
+  ///  * [MaterialTapTargetSize], for a description of how this affects tap targets.
   final MaterialTapTargetSize materialTapTargetSize;
+
+  final _SwitchType _switchType;
+
+  /// {@macro flutter.cupertino.switch.dragStartBehavior}
+  final DragStartBehavior dragStartBehavior;
+
+  /// The color for the button's [Material] when it has the input focus.
+  final Color focusColor;
+
+  /// The color for the button's [Material] when a pointer is hovering over it.
+  final Color hoverColor;
+
+  /// {@macro flutter.widgets.Focus.focusNode}
+  final FocusNode focusNode;
+
+  /// {@macro flutter.widgets.Focus.autofocus}
+  final bool autofocus;
 
   @override
   _SwitchState createState() => _SwitchState();
@@ -143,18 +213,73 @@ class Switch extends StatefulWidget {
 }
 
 class _SwitchState extends State<Switch> with TickerProviderStateMixin {
-  @override
-  Widget build(BuildContext context) {
-    assert(debugCheckHasMaterial(context));
-    final ThemeData themeData = Theme.of(context);
-    final bool isDark = themeData.brightness == Brightness.dark;
+  Map<LocalKey, ActionFactory> _actionMap;
 
-    final Color activeThumbColor = widget.activeColor ?? themeData.toggleableActiveColor;
+  @override
+  void initState() {
+    super.initState();
+    _actionMap = <LocalKey, ActionFactory>{
+      ActivateAction.key: _createAction,
+    };
+  }
+
+  void _actionHandler(FocusNode node, Intent intent){
+    if (widget.onChanged != null) {
+      widget.onChanged(!widget.value);
+    }
+    final RenderObject renderObject = node.context.findRenderObject();
+    renderObject.sendSemanticsEvent(const TapSemanticEvent());
+  }
+
+  Action _createAction() {
+    return CallbackAction(
+      ActivateAction.key,
+      onInvoke: _actionHandler,
+    );
+  }
+
+  bool _focused = false;
+  void _handleFocusHighlightChanged(bool focused) {
+    if (focused != _focused) {
+      setState(() { _focused = focused; });
+    }
+  }
+
+  bool _hovering = false;
+  void _handleHoverChanged(bool hovering) {
+    if (hovering != _hovering) {
+      setState(() { _hovering = hovering; });
+    }
+  }
+
+  Size getSwitchSize(ThemeData theme) {
+    switch (widget.materialTapTargetSize ?? theme.materialTapTargetSize) {
+      case MaterialTapTargetSize.padded:
+        return const Size(_kSwitchWidth, _kSwitchHeight);
+        break;
+      case MaterialTapTargetSize.shrinkWrap:
+        return const Size(_kSwitchWidth, _kSwitchHeightCollapsed);
+        break;
+    }
+    assert(false);
+    return null;
+  }
+
+  bool get enabled => widget.onChanged != null;
+
+  Widget buildMaterialSwitch(BuildContext context) {
+    assert(debugCheckHasMaterial(context));
+    final ThemeData theme = Theme.of(context);
+    final bool isDark = theme.brightness == Brightness.dark;
+
+    final Color activeThumbColor = widget.activeColor ?? theme.toggleableActiveColor;
     final Color activeTrackColor = widget.activeTrackColor ?? activeThumbColor.withAlpha(0x80);
+    final Color hoverColor = widget.hoverColor ?? theme.hoverColor;
+    final Color focusColor = widget.focusColor ?? theme.focusColor;
 
     Color inactiveThumbColor;
     Color inactiveTrackColor;
-    if (widget.onChanged != null) {
+    if (enabled) {
       const Color black32 = Color(0x52000000); // Black with 32% opacity
       inactiveThumbColor = widget.inactiveThumbColor ?? (isDark ? Colors.grey.shade400 : Colors.grey.shade50);
       inactiveTrackColor = widget.inactiveTrackColor ?? (isDark ? Colors.white30 : black32);
@@ -162,30 +287,80 @@ class _SwitchState extends State<Switch> with TickerProviderStateMixin {
       inactiveThumbColor = widget.inactiveThumbColor ?? (isDark ? Colors.grey.shade800 : Colors.grey.shade400);
       inactiveTrackColor = widget.inactiveTrackColor ?? (isDark ? Colors.white10 : Colors.black12);
     }
-    Size size;
-    switch (widget.materialTapTargetSize ?? themeData.materialTapTargetSize) {
-      case MaterialTapTargetSize.padded:
-        size = const Size(_kSwitchWidth, _kSwitchHeight);
-        break;
-      case MaterialTapTargetSize.shrinkWrap:
-        size = const Size(_kSwitchWidth, _kSwitchHeightCollapsed);
-        break;
-    }
-    final BoxConstraints additionalConstraints = BoxConstraints.tight(size);
 
-    return _SwitchRenderObjectWidget(
-      value: widget.value,
-      activeColor: activeThumbColor,
-      inactiveColor: inactiveThumbColor,
-      activeThumbImage: widget.activeThumbImage,
-      inactiveThumbImage: widget.inactiveThumbImage,
-      activeTrackColor: activeTrackColor,
-      inactiveTrackColor: inactiveTrackColor,
-      configuration: createLocalImageConfiguration(context),
-      onChanged: widget.onChanged,
-      additionalConstraints: additionalConstraints,
-      vsync: this,
+    return FocusableActionDetector(
+      actions: _actionMap,
+      focusNode: widget.focusNode,
+      autofocus: widget.autofocus,
+      enabled: enabled,
+      onShowFocusHighlight: _handleFocusHighlightChanged,
+      onShowHoverHighlight: _handleHoverChanged,
+      child: Builder(
+        builder: (BuildContext context) {
+          return _SwitchRenderObjectWidget(
+            dragStartBehavior: widget.dragStartBehavior,
+            value: widget.value,
+            activeColor: activeThumbColor,
+            inactiveColor: inactiveThumbColor,
+            hoverColor: hoverColor,
+            focusColor: focusColor,
+            activeThumbImage: widget.activeThumbImage,
+            inactiveThumbImage: widget.inactiveThumbImage,
+            activeTrackColor: activeTrackColor,
+            inactiveTrackColor: inactiveTrackColor,
+            configuration: createLocalImageConfiguration(context),
+            onChanged: widget.onChanged,
+            additionalConstraints: BoxConstraints.tight(getSwitchSize(theme)),
+            hasFocus: _focused,
+            hovering: _hovering,
+            vsync: this,
+          );
+        },
+      ),
     );
+  }
+
+  Widget buildCupertinoSwitch(BuildContext context) {
+    final Size size = getSwitchSize(Theme.of(context));
+    return Focus(
+      focusNode: widget.focusNode,
+      autofocus: widget.autofocus,
+      child: Container(
+        width: size.width, // Same size as the Material switch.
+        height: size.height,
+        alignment: Alignment.center,
+        child: CupertinoSwitch(
+          dragStartBehavior: widget.dragStartBehavior,
+          value: widget.value,
+          onChanged: widget.onChanged,
+          activeColor: widget.activeColor,
+          trackColor: widget.inactiveTrackColor
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    switch (widget._switchType) {
+      case _SwitchType.material:
+        return buildMaterialSwitch(context);
+
+      case _SwitchType.adaptive: {
+        final ThemeData theme = Theme.of(context);
+        assert(theme.platform != null);
+        switch (theme.platform) {
+          case TargetPlatform.android:
+          case TargetPlatform.fuchsia:
+            return buildMaterialSwitch(context);
+          case TargetPlatform.iOS:
+          case TargetPlatform.macOS:
+            return buildCupertinoSwitch(context);
+        }
+      }
+    }
+    assert(false);
+    return null;
   }
 }
 
@@ -195,6 +370,8 @@ class _SwitchRenderObjectWidget extends LeafRenderObjectWidget {
     this.value,
     this.activeColor,
     this.inactiveColor,
+    this.hoverColor,
+    this.focusColor,
     this.activeThumbImage,
     this.inactiveThumbImage,
     this.activeTrackColor,
@@ -203,11 +380,16 @@ class _SwitchRenderObjectWidget extends LeafRenderObjectWidget {
     this.onChanged,
     this.vsync,
     this.additionalConstraints,
+    this.dragStartBehavior,
+    this.hasFocus,
+    this.hovering,
   }) : super(key: key);
 
   final bool value;
   final Color activeColor;
   final Color inactiveColor;
+  final Color hoverColor;
+  final Color focusColor;
   final ImageProvider activeThumbImage;
   final ImageProvider inactiveThumbImage;
   final Color activeTrackColor;
@@ -216,13 +398,19 @@ class _SwitchRenderObjectWidget extends LeafRenderObjectWidget {
   final ValueChanged<bool> onChanged;
   final TickerProvider vsync;
   final BoxConstraints additionalConstraints;
+  final DragStartBehavior dragStartBehavior;
+  final bool hasFocus;
+  final bool hovering;
 
   @override
   _RenderSwitch createRenderObject(BuildContext context) {
     return _RenderSwitch(
+      dragStartBehavior: dragStartBehavior,
       value: value,
       activeColor: activeColor,
       inactiveColor: inactiveColor,
+      hoverColor: hoverColor,
+      focusColor: focusColor,
       activeThumbImage: activeThumbImage,
       inactiveThumbImage: inactiveThumbImage,
       activeTrackColor: activeTrackColor,
@@ -231,6 +419,8 @@ class _SwitchRenderObjectWidget extends LeafRenderObjectWidget {
       onChanged: onChanged,
       textDirection: Directionality.of(context),
       additionalConstraints: additionalConstraints,
+      hasFocus: hasFocus,
+      hovering: hovering,
       vsync: vsync,
     );
   }
@@ -241,6 +431,8 @@ class _SwitchRenderObjectWidget extends LeafRenderObjectWidget {
       ..value = value
       ..activeColor = activeColor
       ..inactiveColor = inactiveColor
+      ..hoverColor = hoverColor
+      ..focusColor = focusColor
       ..activeThumbImage = activeThumbImage
       ..inactiveThumbImage = inactiveThumbImage
       ..activeTrackColor = activeTrackColor
@@ -249,6 +441,9 @@ class _SwitchRenderObjectWidget extends LeafRenderObjectWidget {
       ..onChanged = onChanged
       ..textDirection = Directionality.of(context)
       ..additionalConstraints = additionalConstraints
+      ..dragStartBehavior = dragStartBehavior
+      ..hasFocus = hasFocus
+      ..hovering = hovering
       ..vsync = vsync;
   }
 }
@@ -258,6 +453,8 @@ class _RenderSwitch extends RenderToggleable {
     bool value,
     Color activeColor,
     Color inactiveColor,
+    Color hoverColor,
+    Color focusColor,
     ImageProvider activeThumbImage,
     ImageProvider inactiveThumbImage,
     Color activeTrackColor,
@@ -266,6 +463,9 @@ class _RenderSwitch extends RenderToggleable {
     BoxConstraints additionalConstraints,
     @required TextDirection textDirection,
     ValueChanged<bool> onChanged,
+    DragStartBehavior dragStartBehavior,
+    bool hasFocus,
+    bool hovering,
     @required TickerProvider vsync,
   }) : assert(textDirection != null),
        _activeThumbImage = activeThumbImage,
@@ -279,14 +479,19 @@ class _RenderSwitch extends RenderToggleable {
          tristate: false,
          activeColor: activeColor,
          inactiveColor: inactiveColor,
+         hoverColor: hoverColor,
+         focusColor: focusColor,
          onChanged: onChanged,
          additionalConstraints: additionalConstraints,
+         hasFocus: hasFocus,
+         hovering: hovering,
          vsync: vsync,
        ) {
     _drag = HorizontalDragGestureRecognizer()
       ..onStart = _handleDragStart
       ..onUpdate = _handleDragUpdate
-      ..onEnd = _handleDragEnd;
+      ..onEnd = _handleDragEnd
+      ..dragStartBehavior = dragStartBehavior;
   }
 
   ImageProvider get activeThumbImage => _activeThumbImage;
@@ -347,6 +552,14 @@ class _RenderSwitch extends RenderToggleable {
     markNeedsPaint();
   }
 
+  DragStartBehavior get dragStartBehavior => _drag.dragStartBehavior;
+  set dragStartBehavior(DragStartBehavior value) {
+    assert(value != null);
+    if (_drag.dragStartBehavior == value)
+      return;
+    _drag.dragStartBehavior = value;
+  }
+
   @override
   void detach() {
     _cachedThumbPainter?.dispose();
@@ -405,7 +618,7 @@ class _RenderSwitch extends RenderToggleable {
       color: color,
       image: image == null ? null : DecorationImage(image: image),
       shape: BoxShape.circle,
-      boxShadow: kElevationToShadow[1]
+      boxShadow: kElevationToShadow[1],
     );
   }
 
@@ -429,8 +642,7 @@ class _RenderSwitch extends RenderToggleable {
   @override
   void paint(PaintingContext context, Offset offset) {
     final Canvas canvas = context.canvas;
-
-    final bool isActive = onChanged != null;
+    final bool isEnabled = onChanged != null;
     final double currentValue = position.value;
 
     double visualPosition;
@@ -443,7 +655,17 @@ class _RenderSwitch extends RenderToggleable {
         break;
     }
 
-    final Color trackColor = isActive ? Color.lerp(inactiveTrackColor, activeTrackColor, currentValue) : inactiveTrackColor;
+    final Color trackColor = isEnabled
+      ? Color.lerp(inactiveTrackColor, activeTrackColor, currentValue)
+      : inactiveTrackColor;
+
+    final Color thumbColor = isEnabled
+      ? Color.lerp(inactiveColor, activeColor, currentValue)
+      : inactiveColor;
+
+    final ImageProvider thumbImage = isEnabled
+      ? (currentValue < 0.5 ? inactiveThumbImage : activeThumbImage)
+      : inactiveThumbImage;
 
     // Paint the track
     final Paint paint = Paint()
@@ -453,14 +675,14 @@ class _RenderSwitch extends RenderToggleable {
       offset.dx + trackHorizontalPadding,
       offset.dy + (size.height - _kTrackHeight) / 2.0,
       size.width - 2.0 * trackHorizontalPadding,
-      _kTrackHeight
+      _kTrackHeight,
     );
     final RRect trackRRect = RRect.fromRectAndRadius(trackRect, const Radius.circular(_kTrackRadius));
     canvas.drawRRect(trackRRect, paint);
 
     final Offset thumbPosition = Offset(
       kRadialReactionRadius + visualPosition * _trackInnerLength,
-      size.height / 2.0
+      size.height / 2.0,
     );
 
     paintRadialReaction(canvas, offset, thumbPosition);
@@ -468,8 +690,6 @@ class _RenderSwitch extends RenderToggleable {
     try {
       _isPainting = true;
       BoxPainter thumbPainter;
-      final Color thumbColor = isActive ? Color.lerp(inactiveColor, activeColor, currentValue) : inactiveColor;
-      final ImageProvider thumbImage = isActive ? (currentValue < 0.5 ? inactiveThumbImage : activeThumbImage) : inactiveThumbImage;
       if (_cachedThumbPainter == null || thumbColor != _cachedThumbColor || thumbImage != _cachedThumbImage) {
         _cachedThumbColor = thumbColor;
         _cachedThumbImage = thumbImage;
@@ -483,7 +703,7 @@ class _RenderSwitch extends RenderToggleable {
       thumbPainter.paint(
         canvas,
         thumbPosition + offset - Offset(radius, radius),
-        configuration.copyWith(size: Size.fromRadius(radius))
+        configuration.copyWith(size: Size.fromRadius(radius)),
       );
     } finally {
       _isPainting = false;

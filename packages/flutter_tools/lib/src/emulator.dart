@@ -1,4 +1,4 @@
-// Copyright 2018 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -8,12 +8,12 @@ import 'dart:math' as math;
 import 'android/android_emulator.dart';
 import 'android/android_sdk.dart';
 import 'base/context.dart';
-import 'base/io.dart' show ProcessResult;
-import 'base/process_manager.dart';
+import 'base/process.dart';
+import 'device.dart';
 import 'globals.dart';
 import 'ios/ios_emulators.dart';
 
-EmulatorManager get emulatorManager => context[EmulatorManager];
+EmulatorManager get emulatorManager => context.get<EmulatorManager>();
 
 /// A class to get all available emulators.
 class EmulatorManager {
@@ -54,14 +54,14 @@ class EmulatorManager {
   /// Return the list of all available emulators.
   Future<List<Emulator>> getAllAvailableEmulators() async {
     final List<Emulator> emulators = <Emulator>[];
-    await Future.forEach(_platformDiscoverers, (EmulatorDiscovery discoverer) async {
+    await Future.forEach<EmulatorDiscovery>(_platformDiscoverers, (EmulatorDiscovery discoverer) async {
       emulators.addAll(await discoverer.emulators);
     });
     return emulators;
   }
 
   /// Return the list of all available emulators.
-  Future<CreateEmulatorResult> createEmulator({String name}) async {
+  Future<CreateEmulatorResult> createEmulator({ String name }) async {
     if (name == null || name == '') {
       const String autoName = 'flutter_emulator';
       // Don't use getEmulatorsMatching here, as it will only return one
@@ -69,7 +69,7 @@ class EmulatorManager {
       // so we can keep adding suffixes until we miss.
       final List<Emulator> all = await getAllAvailableEmulators();
       final Set<String> takenNames = all
-          .map((Emulator e) => e.id)
+          .map<String>((Emulator e) => e.id)
           .where((String id) => id.startsWith(autoName))
           .toSet();
       int suffix = 1;
@@ -80,26 +80,29 @@ class EmulatorManager {
     }
 
     final String device = await _getPreferredAvailableDevice();
-    if (device == null)
+    if (device == null) {
       return CreateEmulatorResult(name,
           success: false, error: 'No device definitions are available');
+    }
 
     final String sdkId = await _getPreferredSdkId();
-    if (sdkId == null)
+    if (sdkId == null) {
       return CreateEmulatorResult(name,
           success: false,
           error:
               'No suitable Android AVD system images are available. You may need to install these'
               ' using sdkmanager, for example:\n'
               '  sdkmanager "system-images;android-27;google_apis_playstore;x86"');
+    }
 
     // Cleans up error output from avdmanager to make it more suitable to show
     // to flutter users. Specifically:
     // - Removes lines that say "null" (!)
     // - Removes lines that tell the user to use '--force' to overwrite emulators
     String cleanError(String error) {
-      if (error == null || error.trim() == '')
+      if (error == null || error.trim() == '') {
         return null;
+      }
       return error
           .split('\n')
           .where((String l) => l.trim() != 'null')
@@ -115,9 +118,9 @@ class EmulatorManager {
       'avd',
       '-n', name,
       '-k', sdkId,
-      '-d', device
+      '-d', device,
     ];
-    final ProcessResult runResult = processManager.runSync(args,
+    final RunResult runResult = processUtils.runSync(args,
         environment: androidSdk?.sdkManagerEnv);
     return CreateEmulatorResult(
       name,
@@ -136,12 +139,13 @@ class EmulatorManager {
       getAvdManagerPath(androidSdk),
       'list',
       'device',
-      '-c'
+      '-c',
     ];
-    final ProcessResult runResult = processManager.runSync(args,
+    final RunResult runResult = processUtils.runSync(args,
         environment: androidSdk?.sdkManagerEnv);
-    if (runResult.exitCode != 0)
+    if (runResult.exitCode != 0) {
       return null;
+    }
 
     final List<String> availableDevices = runResult.stdout
         .split('\n')
@@ -164,7 +168,7 @@ class EmulatorManager {
       'avd',
       '-n', 'temp',
     ];
-    final ProcessResult runResult = processManager.runSync(args,
+    final RunResult runResult = processUtils.runSync(args,
         environment: androidSdk?.sdkManagerEnv);
 
     // Get the list of IDs that match our criteria
@@ -176,8 +180,8 @@ class EmulatorManager {
         .toList();
 
     final List<int> availableApiVersions = availableIDs
-        .map((String id) => androidApiVersion.firstMatch(id).group(1))
-        .map((String apiVersion) => int.parse(apiVersion))
+        .map<String>((String id) => androidApiVersion.firstMatch(id).group(1))
+        .map<int>((String apiVersion) => int.parse(apiVersion))
         .toList();
 
     // Get the highest Android API version or whats left
@@ -217,17 +221,20 @@ abstract class Emulator {
   final bool hasConfig;
   String get name;
   String get manufacturer;
-  String get label;
+  Category get category;
+  PlatformType get platformType;
 
   @override
   int get hashCode => id.hashCode;
 
   @override
   bool operator ==(dynamic other) {
-    if (identical(this, other))
+    if (identical(this, other)) {
       return true;
-    if (other is! Emulator)
+    }
+    if (other is! Emulator) {
       return false;
+    }
     return id == other.id;
   }
 
@@ -237,37 +244,38 @@ abstract class Emulator {
   String toString() => name;
 
   static List<String> descriptions(List<Emulator> emulators) {
-    if (emulators.isEmpty)
+    if (emulators.isEmpty) {
       return <String>[];
+    }
 
     // Extract emulators information
-    final List<List<String>> table = <List<String>>[];
-    for (Emulator emulator in emulators) {
-      table.add(<String>[
-        emulator.id ?? '',
-        emulator.name ?? '',
-        emulator.manufacturer ?? '',
-        emulator.label ?? '',
-      ]);
-    }
+    final List<List<String>> table = <List<String>>[
+      for (Emulator emulator in emulators)
+        <String>[
+          emulator.id ?? '',
+          emulator.name ?? '',
+          emulator.manufacturer ?? '',
+          emulator.platformType?.toString() ?? '',
+        ],
+    ];
 
     // Calculate column widths
     final List<int> indices = List<int>.generate(table[0].length - 1, (int i) => i);
-    List<int> widths = indices.map((int i) => 0).toList();
+    List<int> widths = indices.map<int>((int i) => 0).toList();
     for (List<String> row in table) {
-      widths = indices.map((int i) => math.max(widths[i], row[i].length)).toList();
+      widths = indices.map<int>((int i) => math.max(widths[i], row[i].length)).toList();
     }
 
     // Join columns into lines of text
     final RegExp whiteSpaceAndDots = RegExp(r'[•\s]+$');
     return table
-        .map((List<String> row) {
+        .map<String>((List<String> row) {
           return indices
-                  .map((int i) => row[i].padRight(widths[i]))
+                  .map<String>((int i) => row[i].padRight(widths[i]))
                   .join(' • ') +
               ' • ${row.last}';
         })
-        .map((String line) => line.replaceAll(whiteSpaceAndDots, ''))
+        .map<String>((String line) => line.replaceAll(whiteSpaceAndDots, ''))
         .toList();
   }
 
@@ -277,10 +285,10 @@ abstract class Emulator {
 }
 
 class CreateEmulatorResult {
+  CreateEmulatorResult(this.emulatorName, {this.success, this.output, this.error});
+
   final bool success;
   final String emulatorName;
   final String output;
   final String error;
-
-  CreateEmulatorResult(this.emulatorName, {this.success, this.output, this.error});
 }

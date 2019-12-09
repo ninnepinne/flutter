@@ -1,4 +1,4 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -71,7 +71,7 @@ const Map<String, String> kIdentifierRewrites = <String, String>{
 
 };
 
-final Set<String> kMirroredIcons = Set<String>.from(<String>[
+const Set<String> kMirroredIcons = <String>{
   // This list is obtained from:
   // http://google.github.io/material-design-icons/#icons-in-rtl
   'arrow_back',
@@ -145,7 +145,7 @@ final Set<String> kMirroredIcons = Set<String>.from(<String>[
   'view_list',
   'view_quilt',
   'wrap_text',
-]);
+};
 
 void main(List<String> args) {
   // If we're run from the `tools` dir, set the cwd to the repo root.
@@ -158,12 +158,12 @@ void main(List<String> args) {
   argParser.addFlag(kOptionDryRun, defaultsTo: false);
   final ArgResults argResults = argParser.parse(args);
 
-  final File iconFile = File(path.absolute(argResults[kOptionIconsPath]));
+  final File iconFile = File(path.absolute(argResults[kOptionIconsPath] as String));
   if (!iconFile.existsSync()) {
     stderr.writeln('Icons file not found: ${iconFile.path}');
     exit(1);
   }
-  final File codepointsFile = File(path.absolute(argResults[kOptionCodepointsPath]));
+  final File codepointsFile = File(path.absolute(argResults[kOptionCodepointsPath] as String));
   if (!codepointsFile.existsSync()) {
     stderr.writeln('Codepoints file not found: ${codepointsFile.path}');
     exit(1);
@@ -173,7 +173,7 @@ void main(List<String> args) {
   final String codepointData = codepointsFile.readAsStringSync();
   final String newIconData = regenerateIconsFile(iconData, codepointData);
 
-  if (argResults[kOptionDryRun])
+  if (argResults[kOptionDryRun] as bool)
     stdout.writeln(newIconData);
   else
     iconFile.writeAsStringSync(newIconData);
@@ -199,9 +199,9 @@ String regenerateIconsFile(String iconData, String codepointData) {
 
 String generateIconDeclarations(String codepointData) {
   return LineSplitter.split(codepointData)
-      .map((String l) => l.trim())
+      .map<String>((String l) => l.trim())
       .where((String l) => l.isNotEmpty)
-      .map(getIconDeclaration)
+      .map<String>(getIconDeclaration)
       .join();
 }
 

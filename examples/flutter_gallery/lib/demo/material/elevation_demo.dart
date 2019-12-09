@@ -1,3 +1,7 @@
+// Copyright 2014 The Flutter Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 import 'package:flutter/material.dart';
 
 import '../../gallery/demo.dart';
@@ -25,7 +29,7 @@ class _ElevationDemoState extends State<ElevationDemo> {
       24.0,
     ];
 
-    return elevations.map((double elevation) {
+    return elevations.map<Widget>((double elevation) {
       return Center(
         child: Card(
           margin: const EdgeInsets.all(20.0),
@@ -54,12 +58,10 @@ class _ElevationDemoState extends State<ElevationDemo> {
             onPressed: () {
               setState(() => _showElevation = !_showElevation);
             },
-          )
+          ),
         ],
       ),
-      body: ListView(
-        children: buildCards(),
-      ),
+      body: Scrollbar(child: ListView(children: buildCards())),
     );
   }
 }

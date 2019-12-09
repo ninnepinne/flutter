@@ -1,4 +1,4 @@
-// Copyright 2014 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -16,12 +16,6 @@ import 'package:http/http.dart' as http;
 final math.Random _rng = math.Random();
 
 class Stock {
-  String symbol;
-  String name;
-  double lastSale;
-  String marketCap;
-  double percentChange;
-
   Stock(this.symbol, this.name, this.lastSale, this.marketCap, this.percentChange);
 
   Stock.fromFields(List<String> fields) {
@@ -30,12 +24,18 @@ class Stock {
     lastSale = 0.0;
     try {
       lastSale = double.parse(fields[2]);
-    } catch (_) {}
+    } catch (_) { }
     symbol = fields[0];
     name = fields[1];
     marketCap = fields[4];
     percentChange = (_rng.nextDouble() * 20) - 10;
   }
+
+  String symbol;
+  String name;
+  double lastSale;
+  String marketCap;
+  double percentChange;
 }
 
 class StockData extends ChangeNotifier {
@@ -49,14 +49,14 @@ class StockData extends ChangeNotifier {
   final List<String> _symbols = <String>[];
   final Map<String, Stock> _stocks = <String, Stock>{};
 
-  Iterable<String> get allSymbols => _symbols;
+  List<String> get allSymbols => _symbols;
 
   Stock operator [](String symbol) => _stocks[symbol];
 
   bool get loading => _httpClient != null;
 
   void add(List<dynamic> data) {
-    for (List<dynamic> fields in data) {
+    for (List<dynamic> fields in data.cast<List<dynamic>>()) {
       final Stock stock = Stock.fromFields(fields.cast<String>());
       _symbols.add(stock.symbol);
       _stocks[stock.symbol] = stock;
@@ -77,7 +77,7 @@ class StockData extends ChangeNotifier {
   static bool actuallyFetchData = true;
 
   void _fetchNextChunk() {
-    _httpClient.get(_urlToFetch(_nextChunk++)).then<Null>((http.Response response) {
+    _httpClient.get(_urlToFetch(_nextChunk++)).then<void>((http.Response response) {
       final String json = response.body;
       if (json == null) {
         debugPrint('Failed to load stock data chunk ${_nextChunk - 1}');
@@ -85,7 +85,7 @@ class StockData extends ChangeNotifier {
         return;
       }
       const JsonDecoder decoder = JsonDecoder();
-      add(decoder.convert(json));
+      add(decoder.convert(json) as List<dynamic>);
       if (_nextChunk < _chunkCount) {
         _fetchNextChunk();
       } else {

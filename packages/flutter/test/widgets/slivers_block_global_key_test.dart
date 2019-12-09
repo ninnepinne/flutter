@@ -1,4 +1,4 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -24,7 +24,7 @@ class _GenerationTextState extends State<GenerationText> {
 
 // Creates a SliverList with `keys.length` children and each child having a key from `keys` and a text of `key:generation`.
 // The generation is increased with every call to this method.
-Future<Null> test(WidgetTester tester, double offset, List<int> keys) {
+Future<void> test(WidgetTester tester, double offset, List<int> keys) {
   globalGeneration += 1;
   return tester.pumpWidget(
     Directionality(
@@ -34,7 +34,7 @@ Future<Null> test(WidgetTester tester, double offset, List<int> keys) {
         offset: ViewportOffset.fixed(offset),
         slivers: <Widget>[
           SliverList(
-            delegate: SliverChildListDelegate(keys.map((int key) {
+            delegate: SliverChildListDelegate(keys.map<Widget>((int key) {
               return SizedBox(key: GlobalObjectKey(key), height: 100.0, child: GenerationText(key));
             }).toList()),
           ),

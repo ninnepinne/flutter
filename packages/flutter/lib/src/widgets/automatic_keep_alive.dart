@@ -1,4 +1,4 @@
-// Copyright 2017 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -80,7 +80,7 @@ class _AutomaticKeepAliveState extends State<AutomaticKeepAlive> {
     handle.addListener(_handles[handle]);
     if (!_keepingAlive) {
       _keepingAlive = true;
-      final ParentDataElement<SliverMultiBoxAdaptorWidget> childElement = _getChildElement();
+      final ParentDataElement<SliverWithKeepAliveWidget> childElement = _getChildElement();
       if (childElement != null) {
         // If the child already exists, update it synchronously.
         _updateParentDataOfChild(childElement);
@@ -92,7 +92,7 @@ class _AutomaticKeepAliveState extends State<AutomaticKeepAlive> {
           if (!mounted) {
             return;
           }
-          final ParentDataElement<SliverMultiBoxAdaptorWidget> childElement = _getChildElement();
+          final ParentDataElement<SliverWithKeepAliveWidget> childElement = _getChildElement();
           assert(childElement != null);
           _updateParentDataOfChild(childElement);
         });
@@ -105,9 +105,9 @@ class _AutomaticKeepAliveState extends State<AutomaticKeepAlive> {
   ///
   /// While this widget is guaranteed to have a child, this may return null if
   /// the first build of that child has not completed yet.
-  ParentDataElement<SliverMultiBoxAdaptorWidget> _getChildElement() {
+  ParentDataElement<SliverWithKeepAliveWidget> _getChildElement() {
     assert(mounted);
-    final Element element = context;
+    final Element element = context as Element;
     Element childElement;
     // We use Element.visitChildren rather than context.visitChildElements
     // because we might be called during build, and context.visitChildElements
@@ -131,12 +131,12 @@ class _AutomaticKeepAliveState extends State<AutomaticKeepAlive> {
     element.visitChildren((Element child) {
       childElement = child;
     });
-    assert(childElement == null || childElement is ParentDataElement<SliverMultiBoxAdaptorWidget>);
-    return childElement;
+    assert(childElement == null || childElement is ParentDataElement<SliverWithKeepAliveWidget>);
+    return childElement as ParentDataElement<SliverWithKeepAliveWidget>;
   }
 
-  void _updateParentDataOfChild(ParentDataElement<SliverMultiBoxAdaptorWidget> childElement) {
-    childElement.applyWidgetOutOfTurn(build(context));
+  void _updateParentDataOfChild(ParentDataElement<SliverWithKeepAliveWidget> childElement) {
+    childElement.applyWidgetOutOfTurn(build(context) as ParentDataWidget<SliverWithKeepAliveWidget>);
   }
 
   VoidCallback _createCallback(Listenable handle) {
@@ -214,7 +214,7 @@ class _AutomaticKeepAliveState extends State<AutomaticKeepAlive> {
               // If mounted is false, we went away as well, so there's nothing to do.
               // If _handles is no longer empty, then another client (or the same
               // client in a new place) registered itself before we had a chance to
-              // turn off keep-alive, so again there's nothing to do.
+              // turn off keepalive, so again there's nothing to do.
               setState(() {
                 assert(!_keepingAlive);
               });
@@ -273,7 +273,7 @@ class _AutomaticKeepAliveState extends State<AutomaticKeepAlive> {
 /// Failure to trigger the [handle] in the manner described above will likely
 /// cause the [AutomaticKeepAlive] to lose track of whether the widget should be
 /// kept alive or not, leading to memory leaks or lost data. For example, if the
-/// widget that requested keep-alive is removed from the subtree but doesn't
+/// widget that requested keepalive is removed from the subtree but doesn't
 /// trigger its [Listenable] on the way out, then the subtree will continue to
 /// be kept alive until the list itself is disposed. Similarly, if the
 /// [Listenable] is triggered while the widget needs to be kept alive, but a new
@@ -341,11 +341,7 @@ class KeepAliveHandle extends ChangeNotifier {
 ///  * [AutomaticKeepAlive], which listens to messages from this mixin.
 ///  * [KeepAliveNotification], the notifications sent by this mixin.
 @optionalTypeArgs
-abstract class AutomaticKeepAliveClientMixin<T extends StatefulWidget> extends State<T> {
-  // This class is intended to be used as a mixin, and should not be
-  // extended directly.
-  factory AutomaticKeepAliveClientMixin._() => null;
-
+mixin AutomaticKeepAliveClientMixin<T extends StatefulWidget> on State<T> {
   KeepAliveHandle _keepAliveHandle;
 
   void _ensureKeepAlive() {

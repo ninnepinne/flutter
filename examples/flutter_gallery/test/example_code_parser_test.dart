@@ -1,4 +1,4 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -41,12 +41,12 @@ test 1 1
 
 class TestAssetBundle extends AssetBundle {
   @override
-  Future<ByteData> load(String key) => null;
+  Future<ByteData> load(String key) async => null;
 
   @override
-  Future<String> loadString(String key, { bool cache = true }) {
+  Future<String> loadString(String key, { bool cache = true }) async {
     if (key == 'lib/gallery/example_code.dart')
-      return Future<String>.value(testCodeFile);
+      return testCodeFile;
     return null;
   }
 

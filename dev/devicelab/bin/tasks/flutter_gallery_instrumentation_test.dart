@@ -1,4 +1,4 @@
-// Copyright 2017 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -13,7 +13,7 @@ import 'package:flutter_devicelab/framework/utils.dart';
 // with the Java code to report its status. If this test fails due to a problem on the Dart
 // side, you can debug that by just running that file directly using `flutter run`.
 
-Future<Null> main() async {
+Future<void> main() async {
   deviceOperatingSystem = DeviceOperatingSystem.android;
 
   await task(() async {

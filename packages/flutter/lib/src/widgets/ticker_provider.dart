@@ -1,4 +1,4 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -22,7 +22,7 @@ class TickerMode extends InheritedWidget {
   const TickerMode({
     Key key,
     @required this.enabled,
-    Widget child
+    Widget child,
   }) : assert(enabled != null),
        super(key: key, child: child);
 
@@ -49,7 +49,7 @@ class TickerMode extends InheritedWidget {
   /// bool tickingEnabled = TickerMode.of(context);
   /// ```
   static bool of(BuildContext context) {
-    final TickerMode widget = context.inheritFromWidgetOfExactType(TickerMode);
+    final TickerMode widget = context.dependOnInheritedWidgetOfExactType<TickerMode>();
     return widget?.enabled ?? true;
   }
 
@@ -74,11 +74,7 @@ class TickerMode extends InheritedWidget {
 /// [AnimationController] objects over the lifetime of the [State], use a full
 /// [TickerProviderStateMixin] instead.
 @optionalTypeArgs
-abstract class SingleTickerProviderStateMixin<T extends StatefulWidget> extends State<T> implements TickerProvider {
-  // This class is intended to be used as a mixin, and should not be
-  // extended directly.
-  factory SingleTickerProviderStateMixin._() => null;
-
+mixin SingleTickerProviderStateMixin<T extends StatefulWidget> on State<T> implements TickerProvider {
   Ticker _ticker;
 
   @override
@@ -86,15 +82,17 @@ abstract class SingleTickerProviderStateMixin<T extends StatefulWidget> extends 
     assert(() {
       if (_ticker == null)
         return true;
-      throw FlutterError(
-        '$runtimeType is a SingleTickerProviderStateMixin but multiple tickers were created.\n'
-        'A SingleTickerProviderStateMixin can only be used as a TickerProvider once. If a '
-        'State is used for multiple AnimationController objects, or if it is passed to other '
-        'objects and those objects might use it more than one time in total, then instead of '
-        'mixing in a SingleTickerProviderStateMixin, use a regular TickerProviderStateMixin.'
-      );
+      throw FlutterError.fromParts(<DiagnosticsNode>[
+        ErrorSummary('$runtimeType is a SingleTickerProviderStateMixin but multiple tickers were created.'),
+        ErrorDescription('A SingleTickerProviderStateMixin can only be used as a TickerProvider once.'),
+        ErrorHint(
+          'If a State is used for multiple AnimationController objects, or if it is passed to other '
+          'objects and those objects might use it more than one time in total, then instead of '
+          'mixing in a SingleTickerProviderStateMixin, use a regular TickerProviderStateMixin.'
+        )
+      ]);
     }());
-    _ticker = Ticker(onTick, debugLabel: 'created by $this');
+    _ticker = Ticker(onTick, debugLabel: kDebugMode ? 'created by $this' : null);
     // We assume that this is called from initState, build, or some sort of
     // event handler, and that thus TickerMode.of(context) would return true. We
     // can't actually check that here because if we're in initState then we're
@@ -107,15 +105,20 @@ abstract class SingleTickerProviderStateMixin<T extends StatefulWidget> extends 
     assert(() {
       if (_ticker == null || !_ticker.isActive)
         return true;
-      throw FlutterError(
-        '$this was disposed with an active Ticker.\n'
-        '$runtimeType created a Ticker via its SingleTickerProviderStateMixin, but at the time '
-        'dispose() was called on the mixin, that Ticker was still active. The Ticker must '
-        'be disposed before calling super.dispose(). Tickers used by AnimationControllers '
-        'should be disposed by calling dispose() on the AnimationController itself. '
-        'Otherwise, the ticker will leak.\n'
-        'The offending ticker was: ${_ticker.toString(debugIncludeStack: true)}'
-      );
+      throw FlutterError.fromParts(<DiagnosticsNode>[
+        ErrorSummary('$this was disposed with an active Ticker.'),
+        ErrorDescription(
+          '$runtimeType created a Ticker via its SingleTickerProviderStateMixin, but at the time '
+          'dispose() was called on the mixin, that Ticker was still active. The Ticker must '
+          'be disposed before calling super.dispose().'
+        ),
+        ErrorHint(
+          'Tickers used by AnimationControllers '
+          'should be disposed by calling dispose() on the AnimationController itself. '
+          'Otherwise, the ticker will leak.'
+        ),
+        _ticker.describeForError('The offending ticker was')
+      ]);
     }());
     super.dispose();
   }
@@ -156,16 +159,12 @@ abstract class SingleTickerProviderStateMixin<T extends StatefulWidget> extends 
 /// [AnimationController]) for the lifetime of your [State], then using a
 /// [SingleTickerProviderStateMixin] is more efficient. This is the common case.
 @optionalTypeArgs
-abstract class TickerProviderStateMixin<T extends StatefulWidget> extends State<T> implements TickerProvider {
-  // This class is intended to be used as a mixin, and should not be
-  // extended directly.
-  factory TickerProviderStateMixin._() => null;
-
+mixin TickerProviderStateMixin<T extends StatefulWidget> on State<T> implements TickerProvider {
   Set<Ticker> _tickers;
 
   @override
   Ticker createTicker(TickerCallback onTick) {
-    _tickers ??= Set<_WidgetTicker>();
+    _tickers ??= <_WidgetTicker>{};
     final _WidgetTicker result = _WidgetTicker(onTick, this, debugLabel: 'created by $this');
     _tickers.add(result);
     return result;
@@ -183,15 +182,20 @@ abstract class TickerProviderStateMixin<T extends StatefulWidget> extends State<
       if (_tickers != null) {
         for (Ticker ticker in _tickers) {
           if (ticker.isActive) {
-            throw FlutterError(
-              '$this was disposed with an active Ticker.\n'
-              '$runtimeType created a Ticker via its TickerProviderStateMixin, but at the time '
-              'dispose() was called on the mixin, that Ticker was still active. All Tickers must '
-              'be disposed before calling super.dispose(). Tickers used by AnimationControllers '
-              'should be disposed by calling dispose() on the AnimationController itself. '
-              'Otherwise, the ticker will leak.\n'
-              'The offending ticker was: ${ticker.toString(debugIncludeStack: true)}'
-            );
+            throw FlutterError.fromParts(<DiagnosticsNode>[
+              ErrorSummary('$this was disposed with an active Ticker.'),
+              ErrorDescription(
+                '$runtimeType created a Ticker via its TickerProviderStateMixin, but at the time '
+                'dispose() was called on the mixin, that Ticker was still active. All Tickers must '
+                'be disposed before calling super.dispose().'
+              ),
+              ErrorHint(
+                'Tickers used by AnimationControllers '
+                'should be disposed by calling dispose() on the AnimationController itself. '
+                'Otherwise, the ticker will leak.'
+              ),
+              ticker.describeForError('The offending ticker was'),
+            ]);
           }
         }
       }

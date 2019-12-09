@@ -1,4 +1,4 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -34,7 +34,7 @@ class UpdaterState extends State<Updater> {
     // Only prompt once a day
     if (_lastUpdateCheck != null &&
         DateTime.now().difference(_lastUpdateCheck) < const Duration(days: 1)) {
-      return null; // We already checked for updates recently
+      return; // We already checked for updates recently
     }
     _lastUpdateCheck = DateTime.now();
 

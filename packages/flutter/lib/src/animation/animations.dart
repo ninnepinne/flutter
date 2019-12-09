@@ -1,15 +1,17 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 import 'dart:math' as math;
-import 'dart:ui' show VoidCallback;
 
 import 'package:flutter/foundation.dart';
 
 import 'animation.dart';
 import 'curves.dart';
 import 'listener_helpers.dart';
+
+// Examples can assume:
+// AnimationController controller;
 
 class _AlwaysCompleteAnimation extends Animation<double> {
   const _AlwaysCompleteAnimation();
@@ -120,11 +122,7 @@ class AlwaysStoppedAnimation<T> extends Animation<T> {
 ///
 /// To define a mapping from values in the range 0..1, consider subclassing
 /// [Tween] instead.
-abstract class AnimationWithParentMixin<T> {
-  // This class is intended to be used as a mixin, and should not be
-  // extended directly.
-  factory AnimationWithParentMixin._() => null;
-
+mixin AnimationWithParentMixin<T> {
   /// The animation whose value this animation will proxy.
   ///
   /// This animation must remain the same for the lifetime of this object. If
@@ -329,7 +327,7 @@ class ReverseAnimation extends Animation<double>
 ///
 /// If you want to apply a [Curve] to a [Tween], consider using [CurveTween].
 ///
-/// ## Sample code
+/// {@tool sample}
 ///
 /// The following code snippet shows how you can apply a curve to a linear
 /// animation produced by an [AnimationController] `controller`.
@@ -340,6 +338,8 @@ class ReverseAnimation extends Animation<double>
 ///   curve: Curves.ease,
 /// );
 /// ```
+/// {@end-tool}
+/// {@tool sample}
 ///
 /// This second code snippet shows how to apply a different curve in the forward
 /// direction than in the reverse direction. This can't be done using a
@@ -353,6 +353,7 @@ class ReverseAnimation extends Animation<double>
 ///   reverseCurve: Curves.easeOut,
 /// );
 /// ```
+/// {@end-tool}
 ///
 /// By default, the [reverseCurve] matches the forward [curve].
 ///
@@ -371,7 +372,7 @@ class CurvedAnimation extends Animation<double> with AnimationWithParentMixin<do
   CurvedAnimation({
     @required this.parent,
     @required this.curve,
-    this.reverseCurve
+    this.reverseCurve,
   }) : assert(parent != null),
        assert(curve != null) {
     _updateCurveDirection(parent.status);
@@ -438,12 +439,14 @@ class CurvedAnimation extends Animation<double> with AnimationWithParentMixin<do
         final double transformedValue = activeCurve.transform(t);
         final double roundedTransformedValue = transformedValue.round().toDouble();
         if (roundedTransformedValue != t) {
-          throw FlutterError(
-            'Invalid curve endpoint at $t.\n'
-            'Curves must map 0.0 to near zero and 1.0 to near one but '
-            '${activeCurve.runtimeType} mapped $t to $transformedValue, which '
-            'is near $roundedTransformedValue.'
-          );
+          throw FlutterError.fromParts(<DiagnosticsNode>[
+            ErrorSummary('Invalid curve endpoint at $t.'),
+            ErrorDescription(
+              'Curves must map 0.0 to near zero and 1.0 to near one but '
+              '${activeCurve.runtimeType} mapped $t to $transformedValue, which '
+              'is near $roundedTransformedValue.'
+            )
+          ]);
         }
         return true;
       }());
@@ -491,7 +494,7 @@ class TrainHoppingAnimation extends Animation<double>
   /// can be null. If the next train is null, then this object will just proxy
   /// the first animation and never hop.
   TrainHoppingAnimation(this._currentTrain, this._nextTrain, { this.onSwitchedTrain })
-    : assert(_currentTrain != null) {
+      : assert(_currentTrain != null) {
     if (_nextTrain != null) {
       if (_currentTrain.value == _nextTrain.value) {
         _currentTrain = _nextTrain;
@@ -699,7 +702,7 @@ class AnimationMax<T extends num> extends CompoundAnimation<T> {
   ///
   /// Both arguments must be non-null. Either can be an [AnimationMax] itself
   /// to combine multiple animations.
-  AnimationMax(Animation<T> first, Animation<T> next): super(first: first, next: next);
+  AnimationMax(Animation<T> first, Animation<T> next) : super(first: first, next: next);
 
   @override
   T get value => math.max(first.value, next.value);
@@ -714,7 +717,7 @@ class AnimationMin<T extends num> extends CompoundAnimation<T> {
   ///
   /// Both arguments must be non-null. Either can be an [AnimationMin] itself
   /// to combine multiple animations.
-  AnimationMin(Animation<T> first, Animation<T> next): super(first: first, next: next);
+  AnimationMin(Animation<T> first, Animation<T> next) : super(first: first, next: next);
 
   @override
   T get value => math.min(first.value, next.value);

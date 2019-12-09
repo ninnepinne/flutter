@@ -1,16 +1,19 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 import 'dart:async';
-import 'dart:convert';
+import 'dart:math' as math;
 
+import '../base/common.dart';
 import '../base/file_system.dart' hide IOSink;
 import '../base/file_system.dart';
 import '../base/io.dart';
 import '../base/platform.dart';
 import '../base/process_manager.dart';
+import '../base/terminal.dart';
 import '../base/utils.dart';
+import '../convert.dart';
 import '../globals.dart';
 
 class AnalysisServer {
@@ -24,15 +27,18 @@ class AnalysisServer {
       StreamController<bool>.broadcast();
   final StreamController<FileAnalysisErrors> _errorsController =
       StreamController<FileAnalysisErrors>.broadcast();
+  bool _didServerErrorOccur = false;
 
   int _id = 0;
 
-  Future<Null> start() async {
+  Future<void> start() async {
     final String snapshot =
         fs.path.join(sdkPath, 'bin/snapshots/analysis_server.dart.snapshot');
     final List<String> command = <String>[
       fs.path.join(sdkPath, 'bin', 'dart'),
       snapshot,
+      '--disable-server-feature-completion',
+      '--disable-server-feature-search',
       '--sdk',
       sdkPath,
     ];
@@ -40,31 +46,25 @@ class AnalysisServer {
     printTrace('dart ${command.skip(1).join(' ')}');
     _process = await processManager.start(command);
     // This callback hookup can't throw.
-    _process.exitCode.whenComplete(() => _process = null); // ignore: unawaited_futures
+    unawaited(_process.exitCode.whenComplete(() => _process = null));
 
     final Stream<String> errorStream =
-        _process.stderr.transform(utf8.decoder).transform(const LineSplitter());
+        _process.stderr.transform<String>(utf8.decoder).transform<String>(const LineSplitter());
     errorStream.listen(printError);
 
     final Stream<String> inStream =
-        _process.stdout.transform(utf8.decoder).transform(const LineSplitter());
+        _process.stdout.transform<String>(utf8.decoder).transform<String>(const LineSplitter());
     inStream.listen(_handleServerResponse);
 
-    // Available options (many of these are obsolete):
-    //   enableAsync, enableDeferredLoading, enableEnums, enableNullAwareOperators,
-    //   enableSuperMixins, generateDart2jsHints, generateHints, generateLints
-    _sendCommand('analysis.updateOptions', <String, dynamic>{
-      'options': <String, dynamic>{'enableSuperMixins': true}
-    });
-
     _sendCommand('server.setSubscriptions', <String, dynamic>{
-      'subscriptions': <String>['STATUS']
+      'subscriptions': <String>['STATUS'],
     });
 
     _sendCommand('analysis.setAnalysisRoots',
         <String, dynamic>{'included': directories, 'excluded': <String>[]});
   }
 
+  bool get didServerErrorOccur => _didServerErrorOccur;
   Stream<bool> get onAnalyzing => _analyzingController.stream;
   Stream<FileAnalysisErrors> get onErrors => _errorsController.stream;
 
@@ -74,7 +74,7 @@ class AnalysisServer {
     final String message = json.encode(<String, dynamic>{
       'id': (++_id).toString(),
       'method': method,
-      'params': params
+      'params': params,
     });
     _process.stdin.writeln(message);
     printTrace('==> $message');
@@ -85,26 +85,27 @@ class AnalysisServer {
 
     final dynamic response = json.decode(line);
 
-    if (response is Map<dynamic, dynamic>) {
+    if (response is Map<String, dynamic>) {
       if (response['event'] != null) {
-        final String event = response['event'];
+        final String event = response['event'] as String;
         final dynamic params = response['params'];
 
-        if (params is Map<dynamic, dynamic>) {
-          if (event == 'server.status')
-            _handleStatus(response['params']);
-          else if (event == 'analysis.errors')
-            _handleAnalysisIssues(response['params']);
-          else if (event == 'server.error')
-            _handleServerError(response['params']);
+        if (params is Map<String, dynamic>) {
+          if (event == 'server.status') {
+            _handleStatus(castStringKeyedMap(response['params']));
+          } else if (event == 'analysis.errors') {
+            _handleAnalysisIssues(castStringKeyedMap(response['params']));
+          } else if (event == 'server.error') {
+            _handleServerError(castStringKeyedMap(response['params']));
+          }
         }
       } else if (response['error'] != null) {
         // Fields are 'code', 'message', and 'stackTrace'.
-        final Map<String, dynamic> error = response['error'];
+        final Map<String, dynamic> error = castStringKeyedMap(response['error']);
         printError(
             'Error response from the server: ${error['code']} ${error['message']}');
         if (error['stackTrace'] != null) {
-          printError(error['stackTrace']);
+          printError(error['stackTrace'] as String);
         }
       }
     }
@@ -113,7 +114,7 @@ class AnalysisServer {
   void _handleStatus(Map<String, dynamic> statusInfo) {
     // {"event":"server.status","params":{"analysis":{"isAnalyzing":true}}}
     if (statusInfo['analysis'] != null && !_analyzingController.isClosed) {
-      final bool isAnalyzing = statusInfo['analysis']['isAnalyzing'];
+      final bool isAnalyzing = statusInfo['analysis']['isAnalyzing'] as bool;
       _analyzingController.add(isAnalyzing);
     }
   }
@@ -122,20 +123,22 @@ class AnalysisServer {
     // Fields are 'isFatal', 'message', and 'stackTrace'.
     printError('Error from the analysis server: ${error['message']}');
     if (error['stackTrace'] != null) {
-      printError(error['stackTrace']);
+      printError(error['stackTrace'] as String);
     }
+    _didServerErrorOccur = true;
   }
 
   void _handleAnalysisIssues(Map<String, dynamic> issueInfo) {
     // {"event":"analysis.errors","params":{"file":"/Users/.../lib/main.dart","errors":[]}}
-    final String file = issueInfo['file'];
-    final List<dynamic> errorsList = issueInfo['errors'];
+    final String file = issueInfo['file'] as String;
+    final List<dynamic> errorsList = issueInfo['errors'] as List<dynamic>;
     final List<AnalysisError> errors = errorsList
         .map<Map<String, dynamic>>(castStringKeyedMap)
         .map<AnalysisError>((Map<String, dynamic> json) => AnalysisError(json))
         .toList();
-    if (!_errorsController.isClosed)
+    if (!_errorsController.isClosed) {
       _errorsController.add(FileAnalysisErrors(file, errors));
+    }
   }
 
   Future<bool> dispose() async {
@@ -145,13 +148,20 @@ class AnalysisServer {
   }
 }
 
+enum _AnalysisSeverity {
+  error,
+  warning,
+  info,
+  none,
+}
+
 class AnalysisError implements Comparable<AnalysisError> {
   AnalysisError(this.json);
 
-  static final Map<String, int> _severityMap = <String, int>{
-    'ERROR': 3,
-    'WARNING': 2,
-    'INFO': 1
+  static final Map<String, _AnalysisSeverity> _severityMap = <String, _AnalysisSeverity>{
+    'INFO': _AnalysisSeverity.info,
+    'WARNING': _AnalysisSeverity.warning,
+    'ERROR': _AnalysisSeverity.error,
   };
 
   static final String _separator = platform.isWindows ? '-' : '•';
@@ -161,16 +171,28 @@ class AnalysisError implements Comparable<AnalysisError> {
   // },"message":"...","hasFix":false}
   Map<String, dynamic> json;
 
-  String get severity => json['severity'];
-  int get severityLevel => _severityMap[severity] ?? 0;
-  String get type => json['type'];
-  String get message => json['message'];
-  String get code => json['code'];
+  String get severity => json['severity'] as String;
+  String get colorSeverity {
+    switch(_severityLevel) {
+      case _AnalysisSeverity.error:
+        return terminal.color(severity, TerminalColor.red);
+      case _AnalysisSeverity.warning:
+        return terminal.color(severity, TerminalColor.yellow);
+      case _AnalysisSeverity.info:
+      case _AnalysisSeverity.none:
+        return severity;
+    }
+    return null;
+  }
+  _AnalysisSeverity get _severityLevel => _severityMap[severity] ?? _AnalysisSeverity.none;
+  String get type => json['type'] as String;
+  String get message => json['message'] as String;
+  String get code => json['code'] as String;
 
-  String get file => json['location']['file'];
-  int get startLine => json['location']['startLine'];
-  int get startColumn => json['location']['startColumn'];
-  int get offset => json['location']['offset'];
+  String get file => json['location']['file'] as String;
+  int get startLine => json['location']['startLine'] as int;
+  int get startColumn => json['location']['startColumn'] as int;
+  int get offset => json['location']['offset'] as int;
 
   String get messageSentenceFragment {
     if (message.endsWith('.')) {
@@ -183,22 +205,28 @@ class AnalysisError implements Comparable<AnalysisError> {
   @override
   int compareTo(AnalysisError other) {
     // Sort in order of file path, error location, severity, and message.
-    if (file != other.file)
+    if (file != other.file) {
       return file.compareTo(other.file);
+    }
 
-    if (offset != other.offset)
+    if (offset != other.offset) {
       return offset - other.offset;
+    }
 
-    final int diff = other.severityLevel - severityLevel;
-    if (diff != 0)
+    final int diff = other._severityLevel.index - _severityLevel.index;
+    if (diff != 0) {
       return diff;
+    }
 
     return message.compareTo(other.message);
   }
 
   @override
   String toString() {
-    return '${severity.toLowerCase().padLeft(7)} $_separator '
+    // Can't use "padLeft" because of ANSI color sequences in the colorized
+    // severity.
+    final String padding = ' ' * math.max(0, 7 - severity.length);
+    return '$padding${colorSeverity.toLowerCase()} $_separator '
         '$messageSentenceFragment $_separator '
         '${fs.path.relative(file)}:$startLine:$startColumn $_separator '
         '$code';

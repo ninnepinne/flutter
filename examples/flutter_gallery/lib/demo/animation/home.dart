@@ -1,4 +1,4 @@
-// Copyright 2017 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -64,7 +64,7 @@ class _RenderStatusBarPaddingSliver extends RenderSliver {
 
   @override
   void performLayout() {
-    final double height = (maxHeight - constraints.scrollOffset / scrollFactor).clamp(0.0, maxHeight);
+    final double height = (maxHeight - constraints.scrollOffset / scrollFactor).clamp(0.0, maxHeight) as double;
     geometry = SliverGeometry(
       paintExtent: math.min(height, constraints.remainingPaintExtent),
       scrollExtent: maxHeight,
@@ -119,8 +119,10 @@ class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {
   final double maxHeight;
   final Widget child;
 
-  @override double get minExtent => minHeight;
-  @override double get maxExtent => math.max(maxHeight, minHeight);
+  @override
+  double get minExtent => minHeight;
+  @override
+  double get maxExtent => math.max(maxHeight, minHeight);
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
@@ -283,15 +285,12 @@ class _AllSectionsView extends AnimatedWidget {
   final List<Widget> sectionCards;
 
   double _selectedIndexDelta(int index) {
-    return (index.toDouble() - selectedIndex.value).abs().clamp(0.0, 1.0);
+    return (index.toDouble() - selectedIndex.value).abs().clamp(0.0, 1.0) as double;
   }
 
   Widget _build(BuildContext context, BoxConstraints constraints) {
     final Size size = constraints.biggest;
 
-    // The layout's progress from from a column to a row. Its value is
-    // 0.0 when size.height equals the maxHeight, 1.0 when the size.height
-    // equals the midHeight.
     // The layout's progress from from a column to a row. Its value is
     // 0.0 when size.height equals the maxHeight, 1.0 when the size.height
     // equals the midHeight.
@@ -493,13 +492,13 @@ class _AnimationDemoHomeState extends State<AnimationDemoHome> {
   }
 
   Iterable<Widget> _detailItemsFor(Section section) {
-    final Iterable<Widget> detailItems = section.details.map((SectionDetail detail) {
+    final Iterable<Widget> detailItems = section.details.map<Widget>((SectionDetail detail) {
       return SectionDetailView(detail: detail);
     });
     return ListTile.divideTiles(context: context, tiles: detailItems);
   }
 
-  Iterable<Widget> _allHeadingItems(double maxHeight, double midScrollOffset) {
+  List<Widget> _allHeadingItems(double maxHeight, double midScrollOffset) {
     final List<Widget> sectionCards = <Widget>[];
     for (int index = 0; index < allSections.length; index++) {
       sectionCards.add(LayoutId(
@@ -512,7 +511,7 @@ class _AnimationDemoHomeState extends State<AnimationDemoHome> {
             setState(() {
               _maybeScroll(midScrollOffset, index, xOffset);
             });
-          }
+          },
         ),
       ));
     }
@@ -591,7 +590,7 @@ class _AnimationDemoHomeState extends State<AnimationDemoHome> {
                       },
                       child: PageView(
                         controller: _detailsPageController,
-                        children: allSections.map((Section section) {
+                        children: allSections.map<Widget>((Section section) {
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: _detailItemsFor(section).toList(),
@@ -617,7 +616,7 @@ class _AnimationDemoHomeState extends State<AnimationDemoHome> {
                   tooltip: 'Back',
                   onPressed: () {
                     _handleBackButton(appBarMidScrollOffset);
-                  }
+                  },
                 ),
               ),
             ),

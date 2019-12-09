@@ -1,4 +1,4 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -13,11 +13,7 @@ import 'scroll_metrics.dart';
 /// have bubbled through.
 ///
 /// This is used by [ScrollNotification] and [OverscrollIndicatorNotification].
-abstract class ViewportNotificationMixin extends Notification {
-  // This class is intended to be used as a mixin, and should not be
-  // extended directly.
-  factory ViewportNotificationMixin._() => null;
-
+mixin ViewportNotificationMixin on Notification {
   /// The number of viewports that this notification has bubbled through.
   ///
   /// Typically listeners only respond to notifications with a [depth] of zero.

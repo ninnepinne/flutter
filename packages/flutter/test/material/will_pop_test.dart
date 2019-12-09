@@ -1,4 +1,4 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -277,7 +277,7 @@ void main() {
     StateSetter contentsSetState; // call this to rebuild the route's SampleForm contents
     bool contentsEmpty = false; // when true, don't include the SampleForm in the route
 
-    final TestPageRoute<Null> route = TestPageRoute<Null>(
+    final TestPageRoute<void> route = TestPageRoute<void>(
       builder: (BuildContext context) {
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setState) {

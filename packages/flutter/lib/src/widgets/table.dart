@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -79,6 +79,8 @@ class _TableElementRow {
 
 /// A widget that uses the table layout algorithm for its children.
 ///
+/// {@youtube 560 315 https://www.youtube.com/watch?v=_lbE0wsVZSw}
+///
 /// If you only have one row, the [Row] widget is more appropriate. If you only
 /// have one column, the [SliverList] or [Column] widgets will be more
 /// appropriate.
@@ -141,7 +143,7 @@ class Table extends RenderObjectWidget {
                               : null,
        super(key: key) {
     assert(() {
-      final List<Widget> flatChildren = children.expand((TableRow row) => row.children).toList(growable: false);
+      final List<Widget> flatChildren = children.expand<Widget>((TableRow row) => row.children).toList(growable: false);
       if (debugChildrenHaveDuplicateKeys(this, flatChildren)) {
         throw FlutterError(
           'Two or more cells in this Table contain widgets with the same key.\n'
@@ -238,59 +240,43 @@ class _TableElement extends RenderObjectElement {
   _TableElement(Table widget) : super(widget);
 
   @override
-  Table get widget => super.widget;
+  Table get widget => super.widget as Table;
 
   @override
-  RenderTable get renderObject => super.renderObject;
+  RenderTable get renderObject => super.renderObject as RenderTable;
 
   // This class ignores the child's slot entirely.
   // Instead of doing incremental updates to the child list, it replaces the entire list each frame.
 
   List<_TableElementRow> _children = const<_TableElementRow>[];
 
-  bool _debugWillReattachChildren = false;
-
   @override
   void mount(Element parent, dynamic newSlot) {
     super.mount(parent, newSlot);
-    assert(!_debugWillReattachChildren);
-    assert(() { _debugWillReattachChildren = true; return true; }());
-    _children = widget.children.map((TableRow row) {
+    _children = widget.children.map<_TableElementRow>((TableRow row) {
       return _TableElementRow(
         key: row.key,
         children: row.children.map<Element>((Widget child) {
           assert(child != null);
           return inflateWidget(child, null);
-        }).toList(growable: false)
+        }).toList(growable: false),
       );
     }).toList(growable: false);
-    assert(() { _debugWillReattachChildren = false; return true; }());
     _updateRenderObjectChildren();
   }
 
   @override
   void insertChildRenderObject(RenderObject child, Element slot) {
-    assert(_debugWillReattachChildren);
     renderObject.setupParentData(child);
   }
 
   @override
   void moveChildRenderObject(RenderObject child, dynamic slot) {
-    assert(_debugWillReattachChildren);
   }
 
   @override
   void removeChildRenderObject(RenderObject child) {
-    assert(() {
-      if (_debugWillReattachChildren)
-        return true;
-      for (Element forgottenChild in _forgottenChildren) {
-        if (forgottenChild.renderObject == child)
-          return true;
-      }
-      return false;
-    }());
-    final TableCellParentData childParentData = child.parentData;
+    final TableCellParentData childParentData = child.parentData as TableCellParentData;
     renderObject.setChild(childParentData.x, childParentData.y, null);
   }
 
@@ -298,8 +284,6 @@ class _TableElement extends RenderObjectElement {
 
   @override
   void update(Table newWidget) {
-    assert(!_debugWillReattachChildren);
-    assert(() { _debugWillReattachChildren = true; return true; }());
     final Map<LocalKey, List<Element>> oldKeyedRows = <LocalKey, List<Element>>{};
     for (_TableElementRow row in _children) {
       if (row.key != null) {
@@ -308,7 +292,7 @@ class _TableElement extends RenderObjectElement {
     }
     final Iterator<_TableElementRow> oldUnkeyedRows = _children.where((_TableElementRow row) => row.key == null).iterator;
     final List<_TableElementRow> newChildren = <_TableElementRow>[];
-    final Set<List<Element>> taken = Set<List<Element>>();
+    final Set<List<Element>> taken = <List<Element>>{};
     for (TableRow row in newWidget.children) {
       List<Element> oldChildren;
       if (row.key != null && oldKeyedRows.containsKey(row.key)) {
@@ -321,14 +305,14 @@ class _TableElement extends RenderObjectElement {
       }
       newChildren.add(_TableElementRow(
         key: row.key,
-        children: updateChildren(oldChildren, row.children, forgottenChildren: _forgottenChildren)
+        children: updateChildren(oldChildren, row.children, forgottenChildren: _forgottenChildren),
       ));
     }
     while (oldUnkeyedRows.moveNext())
       updateChildren(oldUnkeyedRows.current.children, const <Widget>[], forgottenChildren: _forgottenChildren);
     for (List<Element> oldChildren in oldKeyedRows.values.where((List<Element> list) => !taken.contains(list)))
       updateChildren(oldChildren, const <Widget>[], forgottenChildren: _forgottenChildren);
-    assert(() { _debugWillReattachChildren = false; return true; }());
+
     _children = newChildren;
     _updateRenderObjectChildren();
     _forgottenChildren.clear();
@@ -342,16 +326,16 @@ class _TableElement extends RenderObjectElement {
       _children.isNotEmpty ? _children[0].children.length : 0,
       _children.expand<RenderBox>((_TableElementRow row) {
         return row.children.map<RenderBox>((Element child) {
-          final RenderBox box = child.renderObject;
+          final RenderBox box = child.renderObject as RenderBox;
           return box;
         });
-      }).toList()
+      }).toList(),
     );
   }
 
   @override
   void visitChildren(ElementVisitor visitor) {
-    for (Element child in _children.expand((_TableElementRow row) => row.children)) {
+    for (Element child in _children.expand<Element>((_TableElementRow row) => row.children)) {
       if (!_forgottenChildren.contains(child))
         visitor(child);
     }
@@ -375,7 +359,7 @@ class TableCell extends ParentDataWidget<Table> {
   const TableCell({
     Key key,
     this.verticalAlignment,
-    @required Widget child
+    @required Widget child,
   }) : super(key: key, child: child);
 
   /// How this cell is aligned vertically.
@@ -383,7 +367,7 @@ class TableCell extends ParentDataWidget<Table> {
 
   @override
   void applyParentData(RenderObject renderObject) {
-    final TableCellParentData parentData = renderObject.parentData;
+    final TableCellParentData parentData = renderObject.parentData as TableCellParentData;
     if (parentData.verticalAlignment != verticalAlignment) {
       parentData.verticalAlignment = verticalAlignment;
       final AbstractNode targetParent = renderObject.parent;

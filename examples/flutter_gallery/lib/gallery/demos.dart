@@ -1,4 +1,4 @@
-// Copyright 2018 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -8,9 +8,13 @@ import '../demo/all.dart';
 import 'icons.dart';
 
 class GalleryDemoCategory {
-  const GalleryDemoCategory._({ this.name, this.icon });
-  @required final String name;
-  @required final IconData icon;
+  const GalleryDemoCategory._({
+    @required this.name,
+    @required this.icon,
+  });
+
+  final String name;
+  final IconData icon;
 
   @override
   bool operator ==(dynamic other) {
@@ -18,8 +22,8 @@ class GalleryDemoCategory {
       return true;
     if (runtimeType != other.runtimeType)
       return false;
-    final GalleryDemoCategory typedOther = other;
-    return typedOther.name == name && typedOther.icon == icon;
+    return other is GalleryDemoCategory
+        && other.name == name && other.icon == icon;
   }
 
   @override
@@ -93,7 +97,15 @@ List<GalleryDemo> _buildGalleryDemos() {
       icon: GalleryIcons.shrine,
       category: _kDemos,
       routeName: ShrineDemo.routeName,
-      buildRoute: (BuildContext context) => ShrineDemo(),
+      buildRoute: (BuildContext context) => const ShrineDemo(),
+    ),
+    GalleryDemo(
+      title: 'Fortnightly',
+      subtitle: 'Newspaper typography app',
+      icon: GalleryIcons.custom_typography,
+      category: _kDemos,
+      routeName: FortnightlyDemo.routeName,
+      buildRoute: (BuildContext context) => FortnightlyDemo(),
     ),
     GalleryDemo(
       title: 'Contact profile',
@@ -110,6 +122,22 @@ List<GalleryDemo> _buildGalleryDemos() {
       category: _kDemos,
       routeName: AnimationDemo.routeName,
       buildRoute: (BuildContext context) => const AnimationDemo(),
+    ),
+    GalleryDemo(
+      title: '2D Transformations',
+      subtitle: 'Pan, Zoom, Rotate',
+      icon: GalleryIcons.grid_on,
+      category: _kDemos,
+      routeName: TransformationsDemo.routeName,
+      buildRoute: (BuildContext context) => const TransformationsDemo(),
+    ),
+    GalleryDemo(
+      title: 'Pesto',
+      subtitle: 'Simple recipe browser',
+      icon: Icons.adjust,
+      category: _kDemos,
+      routeName: PestoDemo.routeName,
+      buildRoute: (BuildContext context) => const PestoDemo(),
     ),
 
     // Style
@@ -140,6 +168,15 @@ List<GalleryDemo> _buildGalleryDemos() {
       buildRoute: (BuildContext context) => BackdropDemo(),
     ),
     GalleryDemo(
+      title: 'Banner',
+      subtitle: 'Displaying a banner within a list',
+      icon: GalleryIcons.lists_leave_behind,
+      category: _kMaterialComponents,
+      routeName: BannerDemo.routeName,
+      documentationUrl: 'https://api.flutter.dev/flutter/material/MaterialBanner-class.html',
+      buildRoute: (BuildContext context) => const BannerDemo(),
+    ),
+    GalleryDemo(
       title: 'Bottom app bar',
       subtitle: 'Optional floating action button notch',
       icon: GalleryIcons.bottom_app_bar,
@@ -159,7 +196,7 @@ List<GalleryDemo> _buildGalleryDemos() {
     ),
     GalleryDemo(
       title: 'Bottom sheet: Modal',
-      subtitle: 'A dismissable bottom sheet',
+      subtitle: 'A dismissible bottom sheet',
       icon: GalleryIcons.bottom_sheets,
       category: _kMaterialComponents,
       routeName: ModalBottomSheetDemo.routeName,
@@ -243,9 +280,9 @@ List<GalleryDemo> _buildGalleryDemos() {
       subtitle: 'A list with one sub-list level',
       icon: GalleryIcons.expand_all,
       category: _kMaterialComponents,
-      routeName: TwoLevelListDemo.routeName,
+      routeName: ExpansionTileListDemo.routeName,
       documentationUrl: 'https://docs.flutter.io/flutter/material/ExpansionTile-class.html',
-      buildRoute: (BuildContext context) => TwoLevelListDemo(),
+      buildRoute: (BuildContext context) => ExpansionTileListDemo(),
     ),
     GalleryDemo(
       title: 'Expansion panels',
@@ -500,6 +537,13 @@ List<GalleryDemo> _buildGalleryDemos() {
       documentationUrl: 'https://docs.flutter.io/flutter/cupertino/CupertinoSwitch-class.html',
       buildRoute: (BuildContext context) => CupertinoSwitchDemo(),
     ),
+    GalleryDemo(
+      title: 'Text Fields',
+      icon: GalleryIcons.text_fields_alt,
+      category: _kCupertinoComponents,
+      routeName: CupertinoTextFieldDemo.routeName,
+      buildRoute: (BuildContext context) => CupertinoTextFieldDemo(),
+    ),
 
     // Media
     GalleryDemo(
@@ -519,23 +563,6 @@ List<GalleryDemo> _buildGalleryDemos() {
       buildRoute: (BuildContext context) => const VideoDemo(),
     ),
   ];
-
-  // Keep Pesto around for its regression test value. It is not included
-  // in (release builds) the performance tests.
-  assert(() {
-    galleryDemos.insert(0,
-      GalleryDemo(
-        title: 'Pesto',
-        subtitle: 'Simple recipe browser',
-        icon: Icons.adjust,
-        category: _kDemos,
-        routeName: PestoDemo.routeName,
-        buildRoute: (BuildContext context) => const PestoDemo(),
-      ),
-    );
-    return true;
-  }());
-
   return galleryDemos;
 }
 
@@ -555,6 +582,6 @@ final Map<GalleryDemoCategory, List<GalleryDemo>> kGalleryCategoryToDemos =
 final Map<String, String> kDemoDocumentationUrl =
     Map<String, String>.fromIterable(
       kAllGalleryDemos.where((GalleryDemo demo) => demo.documentationUrl != null),
-      key: (dynamic demo) => demo.routeName,
-      value: (dynamic demo) => demo.documentationUrl,
+      key: (dynamic demo) => (demo as GalleryDemo).routeName,
+      value: (dynamic demo) => (demo as GalleryDemo).documentationUrl,
     );

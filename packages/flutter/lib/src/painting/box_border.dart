@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -8,6 +8,9 @@ import 'basic_types.dart';
 import 'border_radius.dart';
 import 'borders.dart';
 import 'edge_insets.dart';
+
+// Examples can assume:
+// BuildContext context;
 
 /// The shape to use when rendering a [Border] or [BoxDecoration].
 ///
@@ -98,13 +101,13 @@ abstract class BoxBorder extends ShapeBorder {
   /// For a more flexible approach, consider [ShapeBorder.lerp], which would
   /// instead [add] the two sets of sides and interpolate them simultaneously.
   ///
-  /// {@macro flutter.material.themeData.lerp}
+  /// {@macro dart.ui.shadow.lerp}
   static BoxBorder lerp(BoxBorder a, BoxBorder b, double t) {
     assert(t != null);
     if ((a is Border || a == null) && (b is Border || b == null))
-      return Border.lerp(a, b, t);
+      return Border.lerp(a as Border, b as Border, t);
     if ((a is BorderDirectional || a == null) && (b is BorderDirectional || b == null))
-      return BorderDirectional.lerp(a, b, t);
+      return BorderDirectional.lerp(a as BorderDirectional, b as BorderDirectional, t);
     if (b is Border && a is BorderDirectional) {
       final BoxBorder c = b;
       b = a;
@@ -149,14 +152,16 @@ abstract class BoxBorder extends ShapeBorder {
         bottom: BorderSide.lerp(a.bottom, b.bottom, t),
       );
     }
-    throw FlutterError(
-      'BoxBorder.lerp can only interpolate Border and BorderDirectional classes.\n'
-      'BoxBorder.lerp() was called with two objects of type ${a.runtimeType} and ${b.runtimeType}:\n'
-      '  $a\n'
-      '  $b\n'
-      'However, only Border and BorderDirectional classes are supported by this method. '
-      'For a more general interpolation method, consider using ShapeBorder.lerp instead.'
-    );
+    throw FlutterError.fromParts(<DiagnosticsNode>[
+      ErrorSummary('BoxBorder.lerp can only interpolate Border and BorderDirectional classes.'),
+      ErrorDescription(
+        'BoxBorder.lerp() was called with two objects of type ${a.runtimeType} and ${b.runtimeType}:\n'
+        '  $a\n'
+        '  $b\n'
+        'However, only Border and BorderDirectional classes are supported by this method.'
+      ),
+      ErrorHint('For a more general interpolation method, consider using ShapeBorder.lerp instead.'),
+    ]);
   }
 
   @override
@@ -193,7 +198,9 @@ abstract class BoxBorder extends ShapeBorder {
   ///
   ///  * [paintBorder], which is used if the border is not uniform.
   @override
-  void paint(Canvas canvas, Rect rect, {
+  void paint(
+    Canvas canvas,
+    Rect rect, {
     TextDirection textDirection,
     BoxShape shape = BoxShape.rectangle,
     BorderRadius borderRadius,
@@ -236,19 +243,23 @@ abstract class BoxBorder extends ShapeBorder {
 ///
 /// The sides are represented by [BorderSide] objects.
 ///
-/// ## Sample code
+/// {@tool sample}
 ///
 /// All four borders the same, two-pixel wide solid white:
 ///
 /// ```dart
 /// Border.all(width: 2.0, color: const Color(0xFFFFFFFF))
 /// ```
+/// {@end-tool}
+/// {@tool sample}
 ///
 /// The border for a material design divider:
 ///
 /// ```dart
 /// Border(bottom: BorderSide(color: Theme.of(context).dividerColor))
 /// ```
+/// {@end-tool}
+/// {@tool sample}
 ///
 /// A 1990s-era "OK" button:
 ///
@@ -281,6 +292,7 @@ abstract class BoxBorder extends ShapeBorder {
 ///   ),
 /// )
 /// ```
+/// {@end-tool}
 ///
 /// See also:
 ///
@@ -304,6 +316,16 @@ class Border extends BoxBorder {
        assert(bottom != null),
        assert(left != null);
 
+  /// Creates a border whose sides are all the same.
+  ///
+  /// The `side` argument must not be null.
+  const Border.fromBorderSide(BorderSide side)
+      : assert(side != null),
+        top = side,
+        right = side,
+        bottom = side,
+        left = side;
+
   /// A uniform border with all sides the same color and width.
   ///
   /// The sides default to black solid borders, one logical pixel wide.
@@ -313,7 +335,7 @@ class Border extends BoxBorder {
     BorderStyle style = BorderStyle.solid,
   }) {
     final BorderSide side = BorderSide(color: color, width: width, style: style);
-    return Border(top: side, right: side, bottom: side, left: side);
+    return Border.fromBorderSide(side);
   }
 
   /// Creates a [Border] that represents the addition of the two given
@@ -380,14 +402,12 @@ class Border extends BoxBorder {
 
   @override
   Border add(ShapeBorder other, { bool reversed = false }) {
-    if (other is! Border)
-      return null;
-    final Border typedOther = other;
-    if (BorderSide.canMerge(top, typedOther.top) &&
-        BorderSide.canMerge(right, typedOther.right) &&
-        BorderSide.canMerge(bottom, typedOther.bottom) &&
-        BorderSide.canMerge(left, typedOther.left)) {
-      return Border.merge(this, typedOther);
+    if (other is Border &&
+        BorderSide.canMerge(top, other.top) &&
+        BorderSide.canMerge(right, other.right) &&
+        BorderSide.canMerge(bottom, other.bottom) &&
+        BorderSide.canMerge(left, other.left)) {
+      return Border.merge(this, other);
     }
     return null;
   }
@@ -421,7 +441,7 @@ class Border extends BoxBorder {
   /// If a border is null, it is treated as having four [BorderSide.none]
   /// borders.
   ///
-  /// {@macro flutter.material.themeData.lerp}
+  /// {@macro dart.ui.shadow.lerp}
   static Border lerp(Border a, Border b, double t) {
     assert(t != null);
     if (a == null && b == null)
@@ -458,7 +478,9 @@ class Border extends BoxBorder {
   ///
   ///  * [paintBorder], which is used if the border is not uniform.
   @override
-  void paint(Canvas canvas, Rect rect, {
+  void paint(
+    Canvas canvas,
+    Rect rect, {
     TextDirection textDirection,
     BoxShape shape = BoxShape.rectangle,
     BorderRadius borderRadius,
@@ -497,11 +519,11 @@ class Border extends BoxBorder {
       return true;
     if (runtimeType != other.runtimeType)
       return false;
-    final Border typedOther = other;
-    return top == typedOther.top &&
-           right == typedOther.right &&
-           bottom == typedOther.bottom &&
-           left == typedOther.left;
+    return other is Border
+        && other.top == top
+        && other.right == right
+        && other.bottom == bottom
+        && other.left == left;
   }
 
   @override
@@ -511,15 +533,12 @@ class Border extends BoxBorder {
   String toString() {
     if (isUniform)
       return '$runtimeType.all($top)';
-    final List<String> arguments = <String>[];
-    if (top != BorderSide.none)
-      arguments.add('top: $top');
-    if (right != BorderSide.none)
-      arguments.add('right: $right');
-    if (bottom != BorderSide.none)
-      arguments.add('bottom: $bottom');
-    if (left != BorderSide.none)
-      arguments.add('left: $left');
+    final List<String> arguments = <String>[
+      if (top != BorderSide.none) 'top: $top',
+      if (right != BorderSide.none) 'right: $right',
+      if (bottom != BorderSide.none) 'bottom: $bottom',
+      if (left != BorderSide.none) 'left: $left',
+    ];
     return '$runtimeType(${arguments.join(", ")})';
   }
 }
@@ -711,7 +730,7 @@ class BorderDirectional extends BoxBorder {
   /// If a border is null, it is treated as having four [BorderSide.none]
   /// borders.
   ///
-  /// {@macro flutter.material.themeData.lerp}
+  /// {@macro dart.ui.shadow.lerp}
   static BorderDirectional lerp(BorderDirectional a, BorderDirectional b, double t) {
     assert(t != null);
     if (a == null && b == null)
@@ -751,7 +770,9 @@ class BorderDirectional extends BoxBorder {
   ///
   ///  * [paintBorder], which is used if the border is not uniform.
   @override
-  void paint(Canvas canvas, Rect rect, {
+  void paint(
+    Canvas canvas,
+    Rect rect, {
     TextDirection textDirection,
     BoxShape shape = BoxShape.rectangle,
     BorderRadius borderRadius,
@@ -802,11 +823,11 @@ class BorderDirectional extends BoxBorder {
       return true;
     if (runtimeType != other.runtimeType)
       return false;
-    final BorderDirectional typedOther = other;
-    return top == typedOther.top &&
-           start == typedOther.start &&
-           end == typedOther.end &&
-           bottom == typedOther.bottom;
+    return other is BorderDirectional
+        && other.top == top
+        && other.start == start
+        && other.end == end
+        && other.bottom == bottom;
   }
 
   @override
@@ -814,15 +835,12 @@ class BorderDirectional extends BoxBorder {
 
   @override
   String toString() {
-    final List<String> arguments = <String>[];
-    if (top != BorderSide.none)
-      arguments.add('top: $top');
-    if (start != BorderSide.none)
-      arguments.add('start: $start');
-    if (end != BorderSide.none)
-      arguments.add('end: $end');
-    if (bottom != BorderSide.none)
-      arguments.add('bottom: $bottom');
+    final List<String> arguments = <String>[
+      if (top != BorderSide.none) 'top: $top',
+      if (start != BorderSide.none) 'start: $start',
+      if (end != BorderSide.none) 'end: $end',
+      if (bottom != BorderSide.none) 'bottom: $bottom',
+    ];
     return '$runtimeType(${arguments.join(", ")})';
   }
 }

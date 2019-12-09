@@ -1,4 +1,4 @@
-// Copyright 2015 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -11,6 +11,16 @@ void main() {
     expect(() => Border(top: nonconst(null)), throwsAssertionError);
     expect(() => Border(right: nonconst(null)), throwsAssertionError);
     expect(() => Border(bottom: nonconst(null)), throwsAssertionError);
+  });
+
+  test('Border.uniform constructor', () {
+    expect(() => Border.fromBorderSide(null), throwsAssertionError);
+    const BorderSide side = BorderSide();
+    const Border border = Border.fromBorderSide(side);
+    expect(border.left, same(side));
+    expect(border.top, same(side));
+    expect(border.right, same(side));
+    expect(border.bottom, same(side));
   });
 
   test('Border.merge', () {

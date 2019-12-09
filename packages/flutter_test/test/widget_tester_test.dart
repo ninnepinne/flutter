@@ -1,4 +1,4 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -9,9 +9,12 @@ import 'dart:ui';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:test/test.dart' as test_package;
-import 'package:test/src/frontend/async_matcher.dart' show AsyncMatcher;
+
+// ignore: deprecated_member_use
+import 'package:test_api/test_api.dart' as test_package;
+import 'package:test_api/src/frontend/async_matcher.dart' show AsyncMatcher;
 
 const List<Widget> fooBarTexts = <Text>[
   Text('foo', textDirection: TextDirection.ltr),
@@ -19,27 +22,159 @@ const List<Widget> fooBarTexts = <Text>[
 ];
 
 void main() {
+  group('getSemanticsData', () {
+    testWidgets('throws when there are no semantics', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: Text('hello'),
+          ),
+        ),
+      );
+
+      expect(() => tester.getSemantics(find.text('hello')),
+        throwsA(isInstanceOf<StateError>()));
+    }, semanticsEnabled: false);
+
+    testWidgets('throws when there are multiple results from the finder', (WidgetTester tester) async {
+      final SemanticsHandle semanticsHandle = tester.ensureSemantics();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Row(
+              children: const <Widget>[
+                Text('hello'),
+                Text('hello'),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      expect(() => tester.getSemantics(find.text('hello')),
+          throwsA(isInstanceOf<StateError>()));
+      semanticsHandle.dispose();
+    });
+
+    testWidgets('Returns the correct SemanticsData', (WidgetTester tester) async {
+      final SemanticsHandle semanticsHandle = tester.ensureSemantics();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Container(
+              child: OutlineButton(
+                  onPressed: () { },
+                  child: const Text('hello'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final SemanticsNode node = tester.getSemantics(find.text('hello'));
+      final SemanticsData semantics = node.getSemanticsData();
+      expect(semantics.label, 'hello');
+      expect(semantics.hasAction(SemanticsAction.tap), true);
+      expect(semantics.hasFlag(SemanticsFlag.isButton), true);
+      semanticsHandle.dispose();
+    });
+
+    testWidgets('Can enable semantics for tests via semanticsEnabled', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Container(
+              child: OutlineButton(
+                  onPressed: () { },
+                  child: const Text('hello'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final SemanticsNode node = tester.getSemantics(find.text('hello'));
+      final SemanticsData semantics = node.getSemanticsData();
+      expect(semantics.label, 'hello');
+      expect(semantics.hasAction(SemanticsAction.tap), true);
+      expect(semantics.hasFlag(SemanticsFlag.isButton), true);
+    }, semanticsEnabled: true);
+
+    testWidgets('Returns merged SemanticsData', (WidgetTester tester) async {
+      final SemanticsHandle semanticsHandle = tester.ensureSemantics();
+      const Key key = Key('test');
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Semantics(
+              label: 'A',
+              child: Semantics(
+                label: 'B',
+                child: Semantics(
+                  key: key,
+                  label: 'C',
+                  child: Container(),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final SemanticsNode node = tester.getSemantics(find.byKey(key));
+      final SemanticsData semantics = node.getSemanticsData();
+      expect(semantics.label, 'A\nB\nC');
+      semanticsHandle.dispose();
+    });
+  });
+
+  group('ensureVisible', () {
+    testWidgets('scrolls to make widget visible', (WidgetTester tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: ListView.builder(
+              itemCount: 20,
+              shrinkWrap: true,
+              itemBuilder: (BuildContext context, int i) => ListTile(title: Text('Item $i')),
+           ),
+         ),
+        ),
+      );
+
+      // Make sure widget isn't on screen
+      expect(find.text('Item 15', skipOffstage: true), findsNothing);
+
+      await tester.ensureVisible(find.text('Item 15', skipOffstage: false));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Item 15', skipOffstage: true), findsOneWidget);
+    });
+  });
+
   group('expectLater', () {
     testWidgets('completes when matcher completes', (WidgetTester tester) async {
       final Completer<void> completer = Completer<void>();
       final Future<void> future = expectLater(null, FakeMatcher(completer));
-      String value;
-      future.then((void _) {
-        value = '123';
+      String result;
+      future.then<void>((void value) {
+        result = '123';
       });
-      test_package.expect(value, isNull);
+      test_package.expect(result, isNull);
       completer.complete();
-      test_package.expect(value, isNull);
+      test_package.expect(result, isNull);
       await future;
       await tester.pump();
-      test_package.expect(value, '123');
+      test_package.expect(result, '123');
     });
 
     testWidgets('respects the skip flag', (WidgetTester tester) async {
       final Completer<void> completer = Completer<void>();
       final Future<void> future = expectLater(null, FakeMatcher(completer), skip: 'testing skip');
       bool completed = false;
-      future.then((void _) {
+      future.then<void>((_) {
         completed = true;
       });
       test_package.expect(completed, isFalse);
@@ -58,14 +193,14 @@ void main() {
       TestFailure failure;
       try {
         expect(find.text('foo', skipOffstage: false), findsOneWidget);
-      } catch (e) {
+      } on TestFailure catch (e) {
         failure = e;
       }
 
       expect(failure, isNotNull);
       final String message = failure.message;
       expect(message, contains('Expected: exactly one matching node in the widget tree\n'));
-      expect(message, contains('Actual: ?:<zero widgets with text "foo">\n'));
+      expect(message, contains('Actual: _TextFinder:<zero widgets with text "foo">\n'));
       expect(message, contains('Which: means none were found but one was expected\n'));
     });
   });
@@ -81,7 +216,7 @@ void main() {
       TestFailure failure;
       try {
         expect(find.text('foo', skipOffstage: false), findsNothing);
-      } catch (e) {
+      } on TestFailure catch (e) {
         failure = e;
       }
 
@@ -89,7 +224,7 @@ void main() {
       final String message = failure.message;
 
       expect(message, contains('Expected: no matching nodes in the widget tree\n'));
-      expect(message, contains('Actual: ?:<exactly one widget with text "foo": Text("foo", textDirection: ltr)>\n'));
+      expect(message, contains('Actual: _TextFinder:<exactly one widget with text "foo": Text("foo", textDirection: ltr)>\n'));
       expect(message, contains('Which: means one was found but none were expected\n'));
     });
 
@@ -99,7 +234,7 @@ void main() {
       TestFailure failure;
       try {
         expect(find.text('foo'), findsNothing);
-      } catch (e) {
+      } on TestFailure catch (e) {
         failure = e;
       }
 
@@ -107,7 +242,7 @@ void main() {
       final String message = failure.message;
 
       expect(message, contains('Expected: no matching nodes in the widget tree\n'));
-      expect(message, contains('Actual: ?:<exactly one widget with text "foo" (ignoring offstage widgets): Text("foo", textDirection: ltr)>\n'));
+      expect(message, contains('Actual: _TextFinder:<exactly one widget with text "foo" (ignoring offstage widgets): Text("foo", textDirection: ltr)>\n'));
       expect(message, contains('Which: means one was found but none were expected\n'));
     });
 
@@ -154,12 +289,12 @@ void main() {
       TestFailure failure;
       try {
         expect(find.byElementPredicate((_) => false, description: customDescription), findsOneWidget);
-      } catch (e) {
+      } on TestFailure catch (e) {
         failure = e;
       }
 
       expect(failure, isNotNull);
-      expect(failure.message, contains('Actual: ?:<zero widgets with $customDescription'));
+      expect(failure.message, contains('Actual: _ElementPredicateFinder:<zero widgets with $customDescription'));
     });
   });
 
@@ -171,12 +306,12 @@ void main() {
       TestFailure failure;
       try {
         expect(find.byWidgetPredicate((_) => false, description: customDescription), findsOneWidget);
-      } catch (e) {
+      } on TestFailure catch (e) {
         failure = e;
       }
 
       expect(failure, isNotNull);
-      expect(failure.message, contains('Actual: ?:<zero widgets with $customDescription'));
+      expect(failure.message, contains('Actual: _WidgetPredicateFinder:<zero widgets with $customDescription'));
     });
   });
 
@@ -223,9 +358,9 @@ void main() {
       try {
         expect(find.descendant(
           of: find.widgetWithText(Column, 'foo'),
-          matching: find.text('bar')
+          matching: find.text('bar'),
         ), findsOneWidget);
-      } catch (e) {
+      } on TestFailure catch (e) {
         failure = e;
       }
 
@@ -233,7 +368,7 @@ void main() {
       expect(
         failure.message,
         contains(
-          'Actual: ?:<zero widgets with text "bar" that has ancestor(s) with type "Column" which is an ancestor of text "foo"',
+          'Actual: _DescendantFinder:<zero widgets with text "bar" that has ancestor(s) with type "Column" which is an ancestor of text "foo"',
         ),
       );
     });
@@ -287,7 +422,7 @@ void main() {
           of: find.text('bar'),
           matching: find.widgetWithText(Column, 'foo'),
         ), findsOneWidget);
-      } catch (e) {
+      } on TestFailure catch (e) {
         failure = e;
       }
 
@@ -295,7 +430,7 @@ void main() {
       expect(
         failure.message,
         contains(
-          'Actual: ?:<zero widgets with type "Column" which is an ancestor of text "foo" which is an ancestor of text "bar"',
+          'Actual: _AncestorFinder:<zero widgets with type "Column" which is an ancestor of text "foo" which is an ancestor of text "bar"',
         ),
       );
     });
@@ -330,7 +465,7 @@ void main() {
     });
   });
 
-  group('pageBack', (){
+  group('pageBack', () {
     testWidgets('fails when there are no back buttons', (WidgetTester tester) async {
       await tester.pumpWidget(Container());
 
@@ -411,7 +546,7 @@ void main() {
 
       await tester.pageBack();
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pumpAndSettle();
 
       expect(find.text('Next'), findsOneWidget);
       expect(find.text('Page 2'), findsNothing);
@@ -421,7 +556,7 @@ void main() {
   testWidgets('hasRunningAnimations control test', (WidgetTester tester) async {
     final AnimationController controller = AnimationController(
       duration: const Duration(seconds: 1),
-      vsync: const TestVSync()
+      vsync: const TestVSync(),
     );
     expect(tester.hasRunningAnimations, isFalse);
     controller.forward();
@@ -437,7 +572,7 @@ void main() {
   testWidgets('pumpAndSettle control test', (WidgetTester tester) async {
     final AnimationController controller = AnimationController(
       duration: const Duration(minutes: 525600),
-      vsync: const TestVSync()
+      vsync: const TestVSync(),
     );
     expect(await tester.pumpAndSettle(), 1);
     controller.forward();
@@ -467,6 +602,7 @@ void main() {
       final StringBuffer buf = StringBuffer('1');
       await tester.runAsync(() async {
         buf.write('2');
+        //ignore: avoid_slow_async_io
         await Directory.current.stat();
         buf.write('3');
       });
@@ -492,13 +628,13 @@ void main() {
     testWidgets('disallows re-entry', (WidgetTester tester) async {
       final Completer<void> completer = Completer<void>();
       tester.runAsync<void>(() => completer.future);
-      expect(() => tester.runAsync(() async {}), throwsA(isInstanceOf<TestFailure>()));
+      expect(() => tester.runAsync(() async { }), throwsA(isInstanceOf<TestFailure>()));
       completer.complete();
     });
 
     testWidgets('maintains existing zone values', (WidgetTester tester) async {
       final Object key = Object();
-      await runZoned(() {
+      await runZoned<Future<void>>(() {
         expect(Zone.current[key], 'abczed');
         return tester.runAsync<void>(() async {
           expect(Zone.current[key], 'abczed');
@@ -529,91 +665,40 @@ void main() {
     await tester.showKeyboard(find.byType(TextField));
     await tester.pump();
   });
-
-  group('getSemanticsData', () {
-    testWidgets('throws when there are no semantics', (WidgetTester tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(
-          home: Scaffold(
-            body: Text('hello'),
-          ),
-        ),
-      );
-
-      expect(() => tester.getSemanticsData(find.text('hello')),
-        throwsA(isInstanceOf<StateError>()));
-    });
-
-    testWidgets('throws when there are multiple results from the finder', (WidgetTester tester) async {
-      final SemanticsHandle semanticsHandle = tester.ensureSemantics();
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Row(
-              children: const <Widget>[
-                Text('hello'),
-                Text('hello'),
-              ],
-            ),
-          ),
-        ),
-      );
-
-      expect(() => tester.getSemanticsData(find.text('hello')),
-          throwsA(isInstanceOf<StateError>()));
-      semanticsHandle.dispose();
-    });
-
-    testWidgets('Returns the correct SemanticsData', (WidgetTester tester) async {
-      final SemanticsHandle semanticsHandle = tester.ensureSemantics();
-
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Container(
-              child: OutlineButton(
-                  onPressed: () {},
-                  child: const Text('hello')
-              ),
-            ),
-          ),
-        ),
-      );
-
-      final SemanticsData semantics = tester.getSemanticsData(find.text('hello'));
-      expect(semantics.label, 'hello');
-      expect(semantics.hasAction(SemanticsAction.tap), true);
-      expect(semantics.hasFlag(SemanticsFlag.isButton), true);
-      semanticsHandle.dispose();
-    });
-
-    testWidgets('Returns merged SemanticsData', (WidgetTester tester) async {
-      final SemanticsHandle semanticsHandle = tester.ensureSemantics();
-      const Key key = Key('test');
-      await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: Semantics(
-              label: 'A',
-              child: Semantics(
-                label: 'B',
-                child: Semantics(
-                  key: key,
-                  label: 'C',
-                  child: Container(),
-                ),
-              ),
-            )
-          ),
-        ),
-      );
-
-      final SemanticsData semantics = tester.getSemanticsData(find.byKey(key));
-      expect(semantics.label, 'A\nB\nC');
-      semanticsHandle.dispose();
-    });
+  testWidgets('verifyTickersWereDisposed control test', (WidgetTester tester) async {
+      FlutterError error;
+      final Ticker ticker = tester.createTicker((Duration duration) {});
+      ticker.start();
+      try {
+        tester.verifyTickersWereDisposed('');
+      } on FlutterError catch (e) {
+        error = e;
+      } finally {
+        expect(error, isNotNull);
+        expect(error.diagnostics.length, 4);
+        expect(error.diagnostics[2].level, DiagnosticLevel.hint);
+        expect(
+          error.diagnostics[2].toStringDeep(),
+          'Tickers used by AnimationControllers should be disposed by\n'
+          'calling dispose() on the AnimationController itself. Otherwise,\n'
+          'the ticker will leak.\n',
+        );
+        expect(error.diagnostics.last, isInstanceOf<DiagnosticsProperty<Ticker>>());
+        expect(error.diagnostics.last.value, ticker);
+        expect(error.toStringDeep(), startsWith(
+          'FlutterError\n'
+          '   A Ticker was active .\n'
+          '   All Tickers must be disposed.\n'
+          '   Tickers used by AnimationControllers should be disposed by\n'
+          '   calling dispose() on the AnimationController itself. Otherwise,\n'
+          '   the ticker will leak.\n'
+          '   The offending ticker was:\n'
+          '     _TestTicker()\n',
+        ));
+      }
+      ticker.stop();
   });
+
 }
 
 class FakeMatcher extends AsyncMatcher {
@@ -623,11 +708,36 @@ class FakeMatcher extends AsyncMatcher {
 
   @override
   Future<String> matchAsync(dynamic object) {
-    return completer.future.then<String>((void _) {
+    return completer.future.then<String>((void value) {
       return object?.toString();
     });
   }
 
   @override
   Description describe(Description description) => description.add('--fake--');
+}
+
+class _SingleTickerTest extends StatefulWidget {
+  const _SingleTickerTest({Key key}) : super(key: key);
+
+  @override
+  _SingleTickerTestState createState() => _SingleTickerTestState();
+}
+
+class _SingleTickerTestState extends State<_SingleTickerTest> with SingleTickerProviderStateMixin {
+  AnimationController controller;
+
+  @override
+  void initState() {
+    super.initState();
+    controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 100),
+    )  ;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container();
+  }
 }

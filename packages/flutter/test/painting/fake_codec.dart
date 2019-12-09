@@ -1,4 +1,4 @@
-// Copyright 2017 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -14,12 +14,12 @@ import 'package:flutter/foundation.dart';
 /// This is useful for running in the test Zone, where it is tricky to receive
 /// callbacks originating from the IO thread.
 class FakeCodec implements ui.Codec {
+  FakeCodec._(this._frameCount, this._repetitionCount, this._frameInfos);
+
   final int _frameCount;
   final int _repetitionCount;
   final List<ui.FrameInfo> _frameInfos;
   int _nextFrame = 0;
-
-  FakeCodec._(this._frameCount, this._repetitionCount, this._frameInfos);
 
   /// Creates a FakeCodec from encoded image data.
   ///

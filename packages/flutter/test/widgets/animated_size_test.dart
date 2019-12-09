@@ -1,4 +1,4 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -10,9 +10,9 @@ class TestPaintingContext implements PaintingContext {
   final List<Invocation> invocations = <Invocation>[];
 
   @override
-    void noSuchMethod(Invocation invocation) {
-      invocations.add(invocation);
-    }
+  void noSuchMethod(Invocation invocation) {
+    invocations.add(invocation);
+  }
 }
 
 void main() {
@@ -138,11 +138,11 @@ void main() {
     });
 
     testWidgets('tracks unstable child, then resumes animation when child stabilizes', (WidgetTester tester) async {
-      Future<Null> pumpMillis(int millis) async {
+      Future<void> pumpMillis(int millis) async {
         await tester.pump(Duration(milliseconds: millis));
       }
 
-      void verify({double size, RenderAnimatedSizeState state}) {
+      void verify({ double size, RenderAnimatedSizeState state }) {
         assert(size != null || state != null);
         final RenderAnimatedSize box = tester.renderObject(find.byType(AnimatedSize));
         if (size != null) {

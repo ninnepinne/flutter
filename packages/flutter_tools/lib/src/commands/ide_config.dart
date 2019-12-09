@@ -1,4 +1,4 @@
-// Copyright 2017 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -41,6 +41,9 @@ class IdeConfigCommand extends FlutterCommand {
 
   @override
   final String name = 'ide-config';
+
+  @override
+  Future<Set<DevelopmentArtifact>> get requiredArtifacts async => const <DevelopmentArtifact>{};
 
   @override
   final String description = 'Configure the IDE for use in the Flutter tree.\n\n'
@@ -121,15 +124,10 @@ class IdeConfigCommand extends FlutterCommand {
       return;
     }
 
-    final Set<String> manifest = Set<String>();
-    final List<FileSystemEntity> flutterFiles = _flutterRoot.listSync(recursive: true);
-    for (FileSystemEntity entity in flutterFiles) {
-      final String relativePath = fs.path.relative(entity.path, from: _flutterRoot.absolute.path);
-      if (entity is! File) {
-        continue;
-      }
-
-      final File srcFile = entity;
+    final Set<String> manifest = <String>{};
+    final Iterable<File> flutterFiles = _flutterRoot.listSync(recursive: true).whereType<File>();
+    for (File srcFile in flutterFiles) {
+      final String relativePath = fs.path.relative(srcFile.path, from: _flutterRoot.absolute.path);
 
       // Skip template files in both the ide_templates and templates
       // directories to avoid copying onto themselves.
@@ -160,7 +158,7 @@ class IdeConfigCommand extends FlutterCommand {
           manifest.add('$relativePath${Template.copyTemplateExtension}');
           continue;
         }
-        if (argResults['overwrite']) {
+        if (boolArg('overwrite')) {
           finalDestinationFile.deleteSync();
           printStatus('  $relativeDestination (overwritten)');
         } else {
@@ -181,18 +179,14 @@ class IdeConfigCommand extends FlutterCommand {
     }
 
     // If we're not overwriting, then we're not going to remove missing items either.
-    if (!argResults['overwrite']) {
+    if (!boolArg('overwrite')) {
       return;
     }
 
     // Look for any files under the template dir that don't exist in the manifest and remove
     // them.
-    final List<FileSystemEntity> templateFiles = _templateDirectory.listSync(recursive: true);
-    for (FileSystemEntity entity in templateFiles) {
-      if (entity is! File) {
-        continue;
-      }
-      final File templateFile = entity;
+    final Iterable<File> templateFiles = _templateDirectory.listSync(recursive: true).whereType<File>();
+    for (File templateFile in templateFiles) {
       final String relativePath = fs.path.relative(
         templateFile.absolute.path,
         from: _templateDirectory.absolute.path,
@@ -218,16 +212,14 @@ class IdeConfigCommand extends FlutterCommand {
   }
 
   @override
-  Future<Null> runCommand() async {
+  Future<FlutterCommandResult> runCommand() async {
     if (argResults.rest.isNotEmpty) {
       throwToolExit('Currently, the only supported IDE is IntelliJ\n$usage', exitCode: 2);
     }
 
-    await Cache.instance.updateAll();
-
-    if (argResults['update-templates']) {
+    if (boolArg('update-templates')) {
       _handleTemplateUpdate();
-      return;
+      return null;
     }
 
     final String flutterRoot = fs.path.absolute(Cache.flutterRoot);
@@ -243,13 +235,15 @@ class IdeConfigCommand extends FlutterCommand {
     printStatus('Updating IDE configuration for Flutter tree at $dirPath...');
     int generatedCount = 0;
     generatedCount += _renderTemplate(_ideName, dirPath, <String, dynamic>{
-      'withRootModule': argResults['with-root-module'],
+      'withRootModule': boolArg('with-root-module'),
     });
 
     printStatus('Wrote $generatedCount files.');
     printStatus('');
     printStatus('Your IntelliJ configuration is now up to date. It is prudent to '
         'restart IntelliJ, if running.');
+
+    return null;
   }
 
   int _renderTemplate(String templateName, String dirPath, Map<String, dynamic> context) {
@@ -257,14 +251,14 @@ class IdeConfigCommand extends FlutterCommand {
     return template.render(
       fs.directory(dirPath),
       context,
-      overwriteExisting: argResults['overwrite'],
+      overwriteExisting: boolArg('overwrite'),
     );
   }
 }
 
 /// Return null if the flutter root directory is a valid destination. Return a
 /// validation message if we should disallow the directory.
-String _validateFlutterDir(String dirPath, {String flutterRoot}) {
+String _validateFlutterDir(String dirPath, { String flutterRoot }) {
   final FileSystemEntityType type = fs.typeSync(dirPath);
 
   if (type != FileSystemEntityType.notFound) {

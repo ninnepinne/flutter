@@ -1,4 +1,4 @@
-// Copyright 2017 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -15,7 +15,7 @@ class TabbedAppBarSample extends StatelessWidget {
             title: const Text('Tabbed AppBar'),
             bottom: TabBar(
               isScrollable: true,
-              tabs: choices.map((Choice choice) {
+              tabs: choices.map<Widget>((Choice choice) {
                 return Tab(
                   text: choice.title,
                   icon: Icon(choice.icon),
@@ -24,7 +24,7 @@ class TabbedAppBarSample extends StatelessWidget {
             ),
           ),
           body: TabBarView(
-            children: choices.map((Choice choice) {
+            children: choices.map<Widget>((Choice choice) {
               return Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: ChoiceCard(choice: choice),

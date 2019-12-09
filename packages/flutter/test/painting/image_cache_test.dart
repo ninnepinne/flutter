@@ -1,4 +1,4 @@
-// Copyright 2016 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -9,9 +9,13 @@ import '../rendering/rendering_tester.dart';
 import 'mocks_for_image_cache.dart';
 
 void main() {
-  TestRenderingFlutterBinding(); // initializes the imageCache
   group(ImageCache, () {
+    setUpAll(() {
+      TestRenderingFlutterBinding(); // initializes the imageCache
+    });
+
     tearDown(() {
+      imageCache.largeImageHandler = null;
       imageCache.clear();
       imageCache.maximumSize = 1000;
       imageCache.maximumSizeBytes = 10485760;
@@ -86,7 +90,6 @@ void main() {
       expect(p.value, equals(16));
 
       // cache has three entries: 3(14), 4(15), 1(16)
-
     });
 
     test('clear removes all images and resets cache size', () async {
@@ -128,5 +131,107 @@ void main() {
       expect(imageCache.currentSizeBytes, 256);
       expect(imageCache.maximumSizeBytes, 256 + 1000);
     });
+
+    test('Large image handler that rejects an image.', () async {
+      bool wasCalled = false;
+      imageCache.largeImageHandler = (ImageCache imageCache, int imageSize) { wasCalled = true; };
+      const TestImage testImage1 = TestImage(width: 8, height: 8);
+      const TestImage testImage2 = TestImage(width: 16, height: 16);
+
+      imageCache.maximumSizeBytes = 256;
+      await extractOneFrame(const TestImageProvider(1, 1, image: testImage1).resolve(ImageConfiguration.empty));
+      expect(imageCache.currentSize, 1);
+      expect(imageCache.currentSizeBytes, 256);
+      expect(imageCache.maximumSizeBytes, 256);
+
+      await extractOneFrame(const TestImageProvider(2, 2, image: testImage2).resolve(ImageConfiguration.empty));
+      expect(imageCache.currentSize, 1);
+      expect(imageCache.currentSizeBytes, 256);
+      expect(imageCache.maximumSizeBytes, 256);
+      expect(wasCalled, isTrue);
+    });
+
+    test('Returns null if an error is caught resolving an image', () {
+      final ErrorImageProvider errorImage = ErrorImageProvider();
+      expect(() => imageCache.putIfAbsent(errorImage, () => errorImage.load(errorImage, null)), throwsA(isInstanceOf<Error>()));
+      bool caughtError = false;
+      final ImageStreamCompleter result = imageCache.putIfAbsent(errorImage, () => errorImage.load(errorImage, null), onError: (dynamic error, StackTrace stackTrace) {
+        caughtError = true;
+      });
+      expect(result, null);
+      expect(caughtError, true);
+    });
+
+    test('already pending image is returned when it is put into the cache again', () async {
+      const TestImage testImage = TestImage(width: 8, height: 8);
+
+      final TestImageStreamCompleter completer1 = TestImageStreamCompleter();
+      final TestImageStreamCompleter completer2 = TestImageStreamCompleter();
+
+      final TestImageStreamCompleter resultingCompleter1 = imageCache.putIfAbsent(testImage, () {
+        return completer1;
+      });
+      final TestImageStreamCompleter resultingCompleter2 = imageCache.putIfAbsent(testImage, () {
+        return completer2;
+      });
+
+      expect(resultingCompleter1, completer1);
+      expect(resultingCompleter2, completer1);
+    });
+
+    test('pending image is removed when cache is cleared', () async {
+      const TestImage testImage = TestImage(width: 8, height: 8);
+
+      final TestImageStreamCompleter completer1 = TestImageStreamCompleter();
+      final TestImageStreamCompleter completer2 = TestImageStreamCompleter();
+
+      final TestImageStreamCompleter resultingCompleter1 = imageCache.putIfAbsent(testImage, () {
+        return completer1;
+      });
+
+      imageCache.clear();
+
+      final TestImageStreamCompleter resultingCompleter2 = imageCache.putIfAbsent(testImage, () {
+        return completer2;
+      });
+
+      expect(resultingCompleter1, completer1);
+      expect(resultingCompleter2, completer2);
+    });
+
+    test('pending image is removed when image is evicted', () async {
+      const TestImage testImage = TestImage(width: 8, height: 8);
+
+      final TestImageStreamCompleter completer1 = TestImageStreamCompleter();
+      final TestImageStreamCompleter completer2 = TestImageStreamCompleter();
+
+      final TestImageStreamCompleter resultingCompleter1 = imageCache.putIfAbsent(testImage, () {
+        return completer1;
+      });
+
+      imageCache.evict(testImage);
+
+      final TestImageStreamCompleter resultingCompleter2 = imageCache.putIfAbsent(testImage, () {
+        return completer2;
+      });
+
+      expect(resultingCompleter1, completer1);
+      expect(resultingCompleter2, completer2);
+    });
+
+    test('failed image can successfully be removed from the cache\'s pending images', () async {
+      const TestImage testImage = TestImage(width: 8, height: 8);
+
+      const FailingTestImageProvider(1, 1, image: testImage)
+          .resolve(ImageConfiguration.empty)
+          .addListener(ImageStreamListener(
+            (ImageInfo image, bool synchronousCall) { },
+            onError: (dynamic exception, StackTrace stackTrace) {
+              final bool evicationResult = imageCache.evict(1);
+              expect(evicationResult, isTrue);
+            },
+          ));
+    });
   });
 }
+

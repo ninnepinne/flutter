@@ -1,4 +1,4 @@
-// Copyright 2017 The Chromium Authors. All rights reserved.
+// Copyright 2014 The Flutter Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -37,7 +37,7 @@ class _BasicAppBarSampleState extends State<BasicAppBarSample> {
             PopupMenuButton<Choice>( // overflow menu
               onSelected: _select,
               itemBuilder: (BuildContext context) {
-                return choices.skip(2).map((Choice choice) {
+                return choices.skip(2).map<PopupMenuItem<Choice>>((Choice choice) {
                   return PopupMenuItem<Choice>(
                     value: choice,
                     child: Text(choice.title),
